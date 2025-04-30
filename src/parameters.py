@@ -29,7 +29,7 @@ class InputParameter(Parameter):
         return abs(target.value - self.value) / target.value
 
     @classmethod
-    def input_guess(cls, output_param):
+    def input_guess(cls, output_param: Parameter):
         return cls(output_param.value)
 
     @classmethod

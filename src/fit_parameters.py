@@ -8,7 +8,8 @@ from parameters import *
 
 
 class ParameterFitterRunner:
-    def __init__(self, param_dict, model_class, fitter_class, output_file, custom_fitter_config):
+    def __init__(self, param_dict, model_class: type[GraphModel], fitter_class: type[ParameterFitter],
+                 output_file: str, custom_fitter_config):
         self.param_dict = param_dict
         self.model_class = model_class
         self.fitter_class = fitter_class
@@ -28,7 +29,7 @@ class ParameterFitterRunner:
         #    format='%(asctime)s\t%(levelname)s:%(name)s:%(process)s:%(message)s')
         row_data = {}
         # row_data['Graph'] = param_dict['Graph']
-        row_data['Fitter'] = fitter_class.name()
+        row_data['Fitter'] = self.fitter_class.name()
 
         # if model_class == RealWorld:
         #    row_data['file_path'] = param_dict['file_path']
@@ -36,13 +37,13 @@ class ParameterFitterRunner:
 
         parameters = []
         parameter_classes = [input_param.output_parameter()
-                             for input_param in model_class.input_parameters()]
+                             for input_param in self.model_class.input_parameters()]
         for parameter_class in parameter_classes:
-            value = param_dict[parameter_class.name()]
+            value = self.param_dict[parameter_class.name()]
             parameter = parameter_class(value)
             parameters.append(parameter)
             row_data['target_' + parameter_class.name()] = parameter.value
-        fitter = fitter_class(model_class, parameters, **custom_fitter_config)
+        fitter = self.fitter_class(self.model_class, parameters, **self.custom_fitter_config)
         logger = multiprocessing.get_logger()
         logger.info("Starting parameter fitting")
         fitted_parameters = fitter.run()

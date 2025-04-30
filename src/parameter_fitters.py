@@ -5,7 +5,7 @@ import numpy as np
 
 
 class ParameterFitter(ABC):
-    def __init__(self, model, target_parameters):
+    def __init__(self, model: type[GraphModel], target_parameters: list[Parameter]):
         super().__init__()
         self.model = model
         self.target_parameters = target_parameters
