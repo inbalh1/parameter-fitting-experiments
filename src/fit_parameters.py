@@ -2,20 +2,22 @@ import csv
 import argparse
 from pathlib import Path
 
-from parameter_fitters import *
+from parameter_fitters import ParameterFitter, RobbinsMonroFinal
+import multiprocessing
 from models import *
 from parameters import *
 
 
 class ParameterFitterRunner:
-    def __init__(self, param_dict, model_class: type[GraphModel], fitter_class: type[ParameterFitter],
+    def __init__(self, target_features: dict, model_class: type[GraphModel], fitter_class: type[ParameterFitter],
                  output_file: str, custom_fitter_config):
-        self.param_dict = param_dict
+        self.target_features = target_features # A dict of the target features (cc, etc)
         self.model_class = model_class
         self.fitter_class = fitter_class
         self.output_file = Path(output_file)
         self.output_file.parent.mkdir(parents=True, exist_ok=True)
         self.custom_fitter_config = custom_fitter_config
+        self.fitter_params = None # Will be determined during execute
 
         networkit.engineering.setNumberOfThreads(1)
         # logger = multiprocessing.log_to_stderr(logging.INFO)
@@ -27,29 +29,39 @@ class ParameterFitterRunner:
         # logging.basicConfig(
         #    level=logging.INFO,
         #    format='%(asctime)s\t%(levelname)s:%(name)s:%(process)s:%(message)s')
-        row_data = {}
-        # row_data['Graph'] = param_dict['Graph']
-        row_data['Fitter'] = self.fitter_class.name()
+
 
         # if model_class == RealWorld:
-        #    row_data['file_path'] = param_dict['file_path']
+        #    row_data['file_path'] = target_features['file_path']
         #    return [row_data]
 
         parameters = []
         parameter_classes = [input_param.output_parameter()
                              for input_param in self.model_class.input_parameters()]
         for parameter_class in parameter_classes:
-            value = self.param_dict[parameter_class.name()]
+            value = self.target_features[parameter_class.name()]
             parameter = parameter_class(value)
             parameters.append(parameter)
-            row_data['target_' + parameter_class.name()] = parameter.value
         fitter = self.fitter_class(self.model_class, parameters, **self.custom_fitter_config)
         logger = multiprocessing.get_logger()
         logger.info("Starting parameter fitting")
-        fitted_parameters = fitter.run()
+        self.fitted_parameters = fitter.run()
         logger.info("Finished parameter fitting")
 
-        for fitted_param in fitted_parameters:
+
+    def writeResults(self):
+        row_data = {}
+        # row_data['Graph'] = target_features['Graph']
+        row_data['Fitter'] = self.fitter_class.name()
+
+        parameter_classes = [input_param.output_parameter()
+                             for input_param in self.model_class.input_parameters()]
+        for parameter_class in parameter_classes:
+            value = self.target_features[parameter_class.name()]
+            parameter = parameter_class(value)
+            row_data['target_' + parameter_class.name()] = parameter.value
+
+        for fitted_param in self.fitted_parameters:
             row_data[fitted_param.name()] = fitted_param.value
 
         averaging_iterations, total_iterations, flips = fitter.statistics()
@@ -96,7 +108,8 @@ if __name__ == "__main__":
         custom_fitter_config["threshold"] = threshold
 
     with open(input_file) as input_dicts_file:
-        param_dict = list(csv.DictReader(input_dicts_file))[0]
+        target_features = list(csv.DictReader(input_dicts_file))[0]
     runner = ParameterFitterRunner(
-        param_dict, model_class, fitter_class, output_file, custom_fitter_config)
+        target_features, model_class, fitter_class, output_file, custom_fitter_config)
     runner.execute()
+    runner.writeResults()

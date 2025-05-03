@@ -7,9 +7,15 @@ import sys
 from models import ErdosRenyi, GraphModel
 from parameters import Parameter
 import csv
+import math
 # target function - I suppose this is this "evaluation function". They say that we want to minimize the value returned from this function
 # facade - there are several options, and they say its important
 
+
+# How to fit this to another model?
+# Configuration space
+# termination_cost_threshold parameter to scenario
+# Choosing the model itself
 
 # TODO: can write the code in a more general way, to combine with the other experiments (the smac should be just the fitter I guess)
 def append_params(accumulated_params: list, cur_params: list):
@@ -19,11 +25,16 @@ def append_params(accumulated_params: list, cur_params: list):
         accumulated_params[i].value += cur_params[i].value
     return accumulated_params
 
-def compare_param(param: Parameter, target_params: dict):
-    return (param.value - float(target_params[param.name()])) ** 2
+# def compare_param(param: Parameter, target_params: dict):
+#     return (param.value - float(target_params[param.name()])) ** 2
+
+def compare_param(param: Parameter, target_param: Parameter):
+    return (param.value - float(target_param.value)) ** 2
+
+
 
 # TODO: give model_class as input
-def target_function_generator(target_params: dict, num_of_samples: int=2, model_class: type[GraphModel]=None):
+def target_function_generator(target_params: list[Parameter], num_of_samples: int=2, model_class: type[GraphModel]=None):
     # This target function suppose to work for any model class
     def target_function(config: Configuration, seed: int):
         input_params = []
@@ -46,7 +57,10 @@ def target_function_generator(target_params: dict, num_of_samples: int=2, model_
         avg_output_params = [param.__class__(param.value / num_of_samples) for param in accumulated_params]
         # print(' avg output: ', avg_output_params)
 
-        final_res = [compare_param(param, target_params) for param in avg_output_params]
+        # If target_params was a list:
+        final_res = list(compare_param(out_param, target_param) for out_param, target_param in zip(
+           avg_output_params, target_params))
+        # final_res = [compare_param(param, target_params) for param in avg_output_params]
         # print("*** Final res: ")
         # print(final_res)
         # Return the targets
@@ -54,12 +68,9 @@ def target_function_generator(target_params: dict, num_of_samples: int=2, model_
     return target_function
 
 
-# TODO: should check whether we have something like that
+# TODO: determine this based on the input graph
 # Configuration space for Erdos renyi
-configspace = ConfigurationSpace({
-    "n": (1000, 15000),
-    "d": (2, 10)
-})
+
 
 def extractParamsFromConfig(config: Configuration, model_class: type[GraphModel],
                             cur_res:dict={}):
@@ -71,6 +82,36 @@ def extractParamsFromConfig(config: Configuration, model_class: type[GraphModel]
             cur_res[param_name] = config[param_name]
     return cur_res
 
+def generate_config_space(target_parameters: list[Parameter], model_class: type[GraphModel]) -> ConfigurationSpace:
+    # configspace = ConfigurationSpace({
+    #     "n": (1000, 15000),
+    #     "d": (1, 15)
+    # })
+    config = {}
+
+    for in_param, target_param in zip(
+            model_class.input_parameters(), target_parameters):
+        if in_param.name() == "n":
+            n = float(target_param.value)
+            config["n"] = (n , n + math.sqrt(n))
+        elif in_param.name() == "d":
+            config["d"] = (1, 15)
+        else:
+            raise NotImplementedError()            
+
+
+    # for param in model_class.input_parameters():
+    #     if param.name() == "n":
+    #         n = float(target_features["n"])
+    #         config["n"] = (n , n + math.sqrt(n))
+    #     elif param.name() == "d":
+    #         config["d"] = (1, 15)
+    #     else:
+    #         raise NotImplementedError()
+    configspace = ConfigurationSpace(config)
+    print('config is: ', config)
+    return configspace
+
 def uniObjective(n_trials):
     # Scenario object specifying the optimization environment
     scenario = Scenario(configspace, deterministic=True, n_trials=n_trials)
@@ -79,16 +120,20 @@ def uniObjective(n_trials):
     incumbent = smac.optimize()
     return incumbent
     
-def multiObjective(n_trials: int, target_features: dict, model_class: type[GraphModel], num_of_samples: int=2):
-    target_function = target_function_generator(target_features, num_of_samples=num_of_samples, model_class=model_class)
-    scenario = Scenario(configspace, deterministic=True, n_trials=n_trials, objectives=["n", "d"])
+def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], num_of_samples: int=10):
+    
+    target_function = target_function_generator(target_parameters, num_of_samples=num_of_samples, model_class=model_class)
+    configspace = generate_config_space(target_parameters, model_class)
+    objectives = [param.name() for param in model_class.input_parameters()]
+     #TODO: explore more the termination_cost_threshold, or objective_limits
+     # My issue is - it stops when one of the objectives is below the cost (not all)
+    scenario = Scenario(configspace, deterministic=True, n_trials=n_trials, objectives=objectives, termination_cost_threshold=[100, 1])
     smac = BlackBoxFacade(scenario, target_function=target_function)
     incumbent = smac.optimize()
-    print('*** Incumbent***')
-    print(incumbent)
+    # print('*** Incumbent***')
+    # print(incumbent)
 
-    # Taking average over resulting configs
-    # TODO: why are there several???
+    # Taking average over resulting incumbents
     avg_incumbent = {}
     for config in incumbent:
         avg_incumbent = extractParamsFromConfig(config, model_class, avg_incumbent)
@@ -98,7 +143,41 @@ def multiObjective(n_trials: int, target_features: dict, model_class: type[Graph
 
     final_res = [param(avg_incumbent[param.name()]) for param in model_class.input_parameters()]
 
+    print('final res is: ', final_res)
+    print('Final cost:', target_function(avg_incumbent, seed=0))
     return final_res
+
+# Function taken from ParameterFitterRunner
+def writeResults(fitted_parameters, output_file, model_class, target_features: list[Parameter], fitter_name):
+    row_data = {}
+    # row_data['Graph'] = param_dict['Graph']
+    row_data['Fitter'] = fitter_name
+
+    parameter_classes = [input_param.output_parameter()
+                            for input_param in model_class.input_parameters()]
+    for parameter_class in parameter_classes:
+        value = target_features[parameter_class.name()]
+        parameter = parameter_class(value)
+        row_data['target_' + parameter_class.name()] = parameter.value
+
+    for fitted_param in fitted_parameters:
+        row_data[fitted_param.name()] = fitted_param.value
+
+    # averaging_iterations, total_iterations, flips = fitter.statistics()
+    # smoothing_iterations = total_iterations - averaging_iterations
+    # row_data['averaging_iterations'] = averaging_iterations
+    # row_data['smoothing_iterations'] = smoothing_iterations
+    # row_data['total_iterations'] = total_iterations
+    # for flip_count, param in zip(flips, parameter_classes):
+    #     row_data['flips_' + param.name()] = flip_count
+    # for key, value in self.custom_fitter_config.items():
+    #     row_data[key] = value
+
+    with open(output_file, "w") as results_file:
+        fieldnames = sorted(set(row_data.keys()))
+        dict_writer = csv.DictWriter(results_file, fieldnames)
+        dict_writer.writeheader()
+        dict_writer.writerow(row_data)
 
 
 def local_run(mode="all"):
@@ -121,30 +200,31 @@ def local_run(mode="all"):
         
         print("Working", input_file)
 
-
-        
-        #fitter_class = MLEFitter
         custom_fitter_config = {}
-        #if alpha is not None:
-        #    custom_fitter_config["alpha"] = alpha
-        #if threshold is not None:
-        #    custom_fitter_config["threshold"] = threshold
-
         with open(input_file) as input_dicts_file:
-            param_dict = list(csv.DictReader(input_dicts_file))
-            param_dict = param_dict[0]
-        print("param dict is: ", param_dict)
+            target_features = list(csv.DictReader(input_dicts_file))
+            target_features = target_features[0]
+        print("param dict is: ", target_features)
         print("Input file: ", input_file)
         
         # TODO: this should be the fitter class
-        fitter = multiObjective(10, param_dict, model_class)
-        # TODO: what to do with the output?? Should somehow write it to a file
+        parameters = []
+        parameter_classes = [input_param.output_parameter()
+                             for input_param in model_class.input_parameters()]
+        for parameter_class in parameter_classes:
+            value = target_features[parameter_class.name()]
+            parameter = parameter_class(value)
+            parameters.append(parameter)
+        fitter = multiObjective(n_trials=100, target_parameters=parameters, model_class=model_class, num_of_samples=10)
+        
         #runner = ParameterFitterRunner(
         #    param_dict, model_class, fitter_class, output_file, custom_fitter_config)
         #runner.execute()
+        fitted_parameters = fitter
+        writeResults(fitted_parameters, output_file, model_class, target_features=target_features, fitter_name="smac")
 
 
-local_run("compact")
+local_run()
 
 # Questions:
 # The configuration space

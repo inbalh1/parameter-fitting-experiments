@@ -13,7 +13,7 @@ class ParameterFitter(ABC):
         self.target_parameters = target_parameters
 
     @abstractmethod
-    def run(self):
+    def run(self)->list[Parameter]:
         pass
 
     @staticmethod
