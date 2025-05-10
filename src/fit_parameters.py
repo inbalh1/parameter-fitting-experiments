@@ -17,7 +17,6 @@ class ParameterFitterRunner:
         self.output_file = Path(output_file)
         self.output_file.parent.mkdir(parents=True, exist_ok=True)
         self.custom_fitter_config = custom_fitter_config
-        self.fitter_params = None # Will be determined during execute
 
         networkit.engineering.setNumberOfThreads(1)
         # logger = multiprocessing.log_to_stderr(logging.INFO)
@@ -34,7 +33,6 @@ class ParameterFitterRunner:
         # if model_class == RealWorld:
         #    row_data['file_path'] = target_features['file_path']
         #    return [row_data]
-
         parameters = []
         parameter_classes = [input_param.output_parameter()
                              for input_param in self.model_class.input_parameters()]
@@ -43,13 +41,17 @@ class ParameterFitterRunner:
             parameter = parameter_class(value)
             parameters.append(parameter)
         fitter = self.fitter_class(self.model_class, parameters, **self.custom_fitter_config)
+        fitted_parameters = self.run_fitter(fitter)
+        self.writeResults(fitter, fitted_parameters)
+
+    def run_fitter(self, fitter):
         logger = multiprocessing.get_logger()
         logger.info("Starting parameter fitting")
-        self.fitted_parameters = fitter.run()
+        fitted_parameters = fitter.run()
         logger.info("Finished parameter fitting")
+        return fitted_parameters
 
-
-    def writeResults(self):
+    def writeResults(self, fitter: ParameterFitter, fitted_parameters: list[Parameter]):
         row_data = {}
         # row_data['Graph'] = target_features['Graph']
         row_data['Fitter'] = self.fitter_class.name()
@@ -61,16 +63,18 @@ class ParameterFitterRunner:
             parameter = parameter_class(value)
             row_data['target_' + parameter_class.name()] = parameter.value
 
-        for fitted_param in self.fitted_parameters:
+        for fitted_param in fitted_parameters:
             row_data[fitted_param.name()] = fitted_param.value
 
-        averaging_iterations, total_iterations, flips = fitter.statistics()
-        smoothing_iterations = total_iterations - averaging_iterations
-        row_data['averaging_iterations'] = averaging_iterations
-        row_data['smoothing_iterations'] = smoothing_iterations
-        row_data['total_iterations'] = total_iterations
-        for flip_count, param in zip(flips, parameter_classes):
-            row_data['flips_' + param.name()] = flip_count
+        statistics = fitter.statistics()
+        if statistics:
+            averaging_iterations, total_iterations, flips = statistics
+            smoothing_iterations = total_iterations - averaging_iterations
+            row_data['averaging_iterations'] = averaging_iterations
+            row_data['smoothing_iterations'] = smoothing_iterations
+            row_data['total_iterations'] = total_iterations
+            for flip_count, param in zip(flips, parameter_classes):
+                row_data['flips_' + param.name()] = flip_count
         for key, value in self.custom_fitter_config.items():
             row_data[key] = value
 

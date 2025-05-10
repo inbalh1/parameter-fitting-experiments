@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 import multiprocessing
 from models import GraphModel
 from parameters import Parameter
+from statistics import Statistics
+from typing import Optional
 
 import numpy as np
 
@@ -19,6 +21,10 @@ class ParameterFitter(ABC):
     @staticmethod
     @abstractmethod
     def name():
+        pass
+
+    @abstractmethod
+    def statistics()->Optional[Statistics]:
         pass
 
 
@@ -46,7 +52,7 @@ class RobbinsMonroFinal(ParameterFitter):
         for callback in self.parameter_update_callbacks:
             callback(iteration, parameters, flips)
 
-    def statistics(self):
+    def statistics(self)->Statistics:
         return self.averaging_start, self.total_iterations, self.flips
 
     def run(self):
