@@ -6,8 +6,8 @@ from fit_parameters import ParameterFitterRunner
 from parameter_fitters import ParameterFitter
 from models import *
 from parameters import *
-import sys
-sys.path.insert(0, '../smac')
+# import sys
+# sys.path.insert(0, '../smac')
 import generalSmac
 
 # This file isn't ready and doesn't work yet...
@@ -22,13 +22,13 @@ class SmacFitter(ParameterFitter):
             target_parameters=self.target_parameters,
             model_class=model_class,
             num_of_samples=num_of_samples)
-        print('params are: ', params)
 
         #for param in params:
         #    averaged_params.append(param.__class__(param.value))
         return averaged_params
         
     def statistics(self):
+        # This statistics are mock
         averaging_iterations = 1
         total_iterations = 1
         flips = [-1] * len(self.target_parameters) # flip for each param
@@ -112,7 +112,6 @@ if __name__ == "__main__":
     #    custom_fitter_config["alpha"] = alpha
     #if threshold is not None:
     #    custom_fitter_config["threshold"] = threshold
-
     with open(input_file) as input_dicts_file:
         param_dict = list(csv.DictReader(input_dicts_file))[0]
         print(param_dict)
