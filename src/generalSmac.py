@@ -2,20 +2,16 @@
 from ConfigSpace import Configuration, ConfigurationSpace
 from smac import BlackBoxFacade
 from smac import Scenario
-
-import sys
-from models import ErdosRenyi, GraphModel
+from models import ErdosRenyi, GraphModel, ALL_MODELS
 from parameters import Parameter
+import sys
+import os
 import csv
 import math
-# target function - I suppose this is this "evaluation function". They say that we want to minimize the value returned from this function
+import numpy as np
+from typing import Literal
 # facade - there are several options, and they say its important
 
-
-# How to fit this to another model?
-# Configuration space
-# termination_cost_threshold parameter to scenario
-# Choosing the model itself
 
 # TODO: can write the code in a more general way, to combine with the other experiments (the smac should be just the fitter I guess)
 def append_params(accumulated_params: list, cur_params: list):
@@ -33,10 +29,11 @@ def compare_param(param: Parameter, target_param: Parameter):
 
 
 
-# TODO: give model_class as input
-def target_function_generator(target_params: list[Parameter], num_of_samples: int=2, model_class: type[GraphModel]=None):
-    # This target function suppose to work for any model class
+def target_function_generator(target_params: list[Parameter], num_of_samples: int=2, model_class: type[GraphModel]=None):    
+    # Generates a target function for a specific input graph (works for any model)
     def target_function(config: Configuration, seed: int):
+        # This is the evaluation function, that given a certain configuration,
+        # returns the cost for each objective (parameter)
         input_params = []
         for input_param in model_class.input_parameters():
             value = config[input_param.name()]
@@ -68,11 +65,7 @@ def target_function_generator(target_params: list[Parameter], num_of_samples: in
     return target_function
 
 
-# TODO: determine this based on the input graph
-# Configuration space for Erdos renyi
-
-
-def extractParamsFromConfig(config: Configuration, model_class: type[GraphModel],
+def extract_params_from_config(config: Configuration, model_class: type[GraphModel],
                             cur_res:dict={}):
     for param in model_class.input_parameters():
         param_name = param.name()
@@ -83,6 +76,8 @@ def extractParamsFromConfig(config: Configuration, model_class: type[GraphModel]
     return cur_res
 
 def generate_config_space(target_parameters: list[Parameter], model_class: type[GraphModel]) -> ConfigurationSpace:
+    # Generate the configuration space, based on the input graph and model
+
     # configspace = ConfigurationSpace({
     #     "n": (1000, 15000),
     #     "d": (1, 15)
@@ -91,43 +86,56 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
 
     for in_param, target_param in zip(
             model_class.input_parameters(), target_parameters):
-        if in_param.name() == "n":
+        if in_param.name() == 'n':
             n = float(target_param.value)
-            config["n"] = (n , n + math.sqrt(n))
-        elif in_param.name() == "d":
-            config["d"] = (1, 15)
+            config['n'] = (n , n + math.sqrt(n))
+        elif in_param.name() == 'd':
+            config['d'] = (1, 15)
+        elif in_param.name() == 'beta':
+            config['beta'] = (2, 3)
         else:
             raise NotImplementedError()            
 
-
-    # for param in model_class.input_parameters():
-    #     if param.name() == "n":
-    #         n = float(target_features["n"])
-    #         config["n"] = (n , n + math.sqrt(n))
-    #     elif param.name() == "d":
-    #         config["d"] = (1, 15)
-    #     else:
-    #         raise NotImplementedError()
+    # TODO: should add temprature here
+    # TODO: consider create a parameers extended class with this info
     configspace = ConfigurationSpace(config)
     print('config is: ', config)
     return configspace
 
-def uniObjective(n_trials):
+# I had this for erdos renyi but it wasn't better: PARAM_NAME_TO_COST_THRESHOLD = { 'n': 10, 'd': 0.01, 'beta': np.inf, 't': np.inf}
+PARAM_NAME_TO_COST_THRESHOLD = { 'n': 100, 'd': 0.1, 'beta': np.inf, 't': np.inf}
+#TODO: explore more the termination_cost_threshold, or objective_limits, specifically the temperature
+def calc_cost_threshold(model_class: type[GraphModel])->list[float]:
+    termination_cost_threshold = []
+    for in_param in model_class.input_parameters():
+        termination_cost_threshold.append(PARAM_NAME_TO_COST_THRESHOLD[in_param.name()])
+    return termination_cost_threshold
+
+def uniObjective(n_trials: int):
     # Scenario object specifying the optimization environment
-    scenario = Scenario(configspace, deterministic=True, n_trials=n_trials)
+    scenario = Scenario(
+        configspace,
+        deterministic=True,
+        n_trials=n_trials)
     # Use SMAC to find the best configuration/hyperparameters
     smac = BlackBoxFacade(scenario, target_function=target1)
     incumbent = smac.optimize()
     return incumbent
     
 def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], num_of_samples: int=10):
-    
+    # TODO: would be nice to get exact output directory in here (including name of file)    
     target_function = target_function_generator(target_parameters, num_of_samples=num_of_samples, model_class=model_class)
     configspace = generate_config_space(target_parameters, model_class)
     objectives = [param.name() for param in model_class.input_parameters()]
-     #TODO: explore more the termination_cost_threshold, or objective_limits
-     # My issue is - it stops when one of the objectives is below the cost (not all)
-    scenario = Scenario(configspace, deterministic=True, n_trials=n_trials, objectives=objectives, termination_cost_threshold=[10, 0.01])
+    termination_cost_threshold = calc_cost_threshold(model_class)
+     # termination_cost_threshold it stops when one of the objectives is below the cost (not all)
+    scenario = Scenario(
+        configspace,
+        deterministic=True,
+        n_trials=n_trials,
+        objectives=objectives,
+        output_directory=os.path.join('smac_output', model_class.name()),
+        termination_cost_threshold=termination_cost_threshold)
     smac = BlackBoxFacade(scenario, target_function=target_function)
     incumbent = smac.optimize()
     # print('*** Incumbent***')
@@ -136,7 +144,7 @@ def multiObjective(n_trials: int, target_parameters: list[Parameter], model_clas
     # Taking average over resulting incumbents
     avg_incumbent = {}
     for config in incumbent:
-        avg_incumbent = extractParamsFromConfig(config, model_class, avg_incumbent)
+        avg_incumbent = extract_params_from_config(config, model_class, avg_incumbent)
 
     for param in model_class.input_parameters():
         avg_incumbent[param.name()] /= len(incumbent)
@@ -180,19 +188,19 @@ def writeResults(fitted_parameters, output_file, model_class, target_features: l
         dict_writer.writerow(row_data)
 
 
-def local_run(mode="all"):
+def local_run(model_name: str, mode: Literal['all', 'compact']='all'):
     import glob
-    import os
     from collections import namedtuple
 
-    model = 'erdos-renyi'
-    input_files = [os.path.splitext(os.path.basename(f))[0] for f in glob.glob(f"../output_data/target_params/{model}/*")]
+    model_choices = {model.name().lower(): model for model in ALL_MODELS}
+    model_class = model_choices[model_name]
+    input_files = [os.path.splitext(os.path.basename(f))[0] for f in glob.glob(f"../output_data/target_params/{model_name}/*")]
     
     if mode == "compact":
         input_files = input_files[:1]
-    base_input = '../output_data/target_params/erdos-renyi'
-    base_output = f"../output_data/fitted_params/smac/{model}"
-    model_class = ErdosRenyi
+    base_input = f'../output_data/target_params/{model_name}'
+    base_output = f"../output_data/fitted_params/smac/{model_name}"
+    
 
     for i in input_files:
         input_file = os.path.join(base_input, f'{i}.csv')
@@ -223,11 +231,12 @@ def local_run(mode="all"):
         fitted_parameters = fitter
         writeResults(fitted_parameters, output_file, model_class, target_features=target_features, fitter_name="smac")
 
-
-local_run()
+if __name__ == '__main__':
+    #local_run(model_name='erdos-renyi')
+    local_run(model_name='chung-lu-pl', mode='compact')
 
 # Questions:
-# The configuration space
-# Target function - what should we minimize - compare to a single input graph?
+# Target function
+    # Perhaps should use abs instead of quadratic
 # Facade - make should to choose the right one...
-# number of trials / mean over a batch of samples - how many??? Whats the connection?
+# Parameters for beta, temperature - config space? cost threshold?

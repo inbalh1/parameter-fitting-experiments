@@ -6,6 +6,8 @@ from fit_parameters import ParameterFitterRunner
 from parameter_fitters import ParameterFitter
 from models import *
 from parameters import *
+import multiprocessing
+import logging
 # import sys
 # sys.path.insert(0, '../smac')
 import generalSmac
@@ -27,13 +29,8 @@ class SmacFitter(ParameterFitter):
         #    averaged_params.append(param.__class__(param.value))
         return averaged_params
         
-    def statistics(self):
-        # This statistics are mock
-        averaging_iterations = 1
-        total_iterations = 1
-        flips = [-1] * len(self.target_parameters) # flip for each param
-        return averaging_iterations, total_iterations, flips
-        
+    def statistics(self)->None:
+        return        
     # def multiObjective(n_trials, target_features):
     #     scenario = Scenario(configspace, deterministic=True, n_trials=n_trials, objectives=["n", "d"])
     #     smac = BlackBoxFacade(scenario, target_function=target_function)
@@ -86,9 +83,6 @@ def local_run(mode='all'):
 
 
 if __name__ == "__main__":
-    local_run('compact')
-    print("Done")
-    exit(0)
     # This is code duplication from fit_parameters (maybe should be outside, choosing method...)
     parser = argparse.ArgumentParser()
     parser.add_argument('input_file', type=str)
@@ -112,6 +106,14 @@ if __name__ == "__main__":
     #    custom_fitter_config["alpha"] = alpha
     #if threshold is not None:
     #    custom_fitter_config["threshold"] = threshold
+    logger = multiprocessing.get_logger()
+    handler = logging.StreamHandler()
+    # TODO: what is it all these logs I added?
+    logger.setLevel(logging.DEBUG)
+    # Optionally, set a formatter
+    formatter = logging.Formatter('[%(levelname)s/%(processName)s] %(message)s')
+    handler.setFormatter(formatter)
+    logger.info("In smac fitter")
     with open(input_file) as input_dicts_file:
         param_dict = list(csv.DictReader(input_dicts_file))[0]
         print(param_dict)
