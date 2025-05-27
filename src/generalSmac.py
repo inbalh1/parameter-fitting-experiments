@@ -1,6 +1,6 @@
 # Trying to understand how to use SMAC
-from ConfigSpace import Configuration, ConfigurationSpace
-from smac import BlackBoxFacade
+from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter, OrdinalHyperparameter, UniformFloatHyperparameter
+from smac import BlackBoxFacade, Scenario
 from smac import Scenario
 from models import ErdosRenyi, GraphModel, ALL_MODELS
 from parameters import Parameter
@@ -83,22 +83,36 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
     #     "d": (1, 15)
     # })
     config = {}
+    configspace = ConfigurationSpace()
 
     for in_param, target_param in zip(
             model_class.input_parameters(), target_parameters):
         if in_param.name() == 'n':
             n = float(target_param.value)
-            config['n'] = (n , n + math.sqrt(n))
+            max_value = int(math.floor(n + math.sqrt(n))) + 1
+            min_value = math.floor(n)
+            config['n'] = (min_value , max_value)
+            configspace.add(
+                OrdinalHyperparameter(
+                "n",
+                sequence=list(range(min_value, max_value))  
+            ))
         elif in_param.name() == 'd':
             config['d'] = (1, 15)
+            configspace.add(CategoricalHyperparameter(
+                "d",
+                choices=list(range(1, 15))
+            ))
         elif in_param.name() == 'beta':
             config['beta'] = (2, 3)
+            configspace.add(UniformFloatHyperparameter("beta", lower=2, upper=3))
         else:
             raise NotImplementedError()            
 
     # TODO: should add temprature here
     # TODO: consider create a parameers extended class with this info
-    configspace = ConfigurationSpace(config)
+    
+    
     print('config is: ', config)
     return configspace
 
