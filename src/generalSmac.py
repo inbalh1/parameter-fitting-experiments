@@ -1,7 +1,8 @@
 # Trying to understand how to use SMAC
 from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter, OrdinalHyperparameter, UniformFloatHyperparameter
-from smac import BlackBoxFacade, Scenario
-from smac import Scenario
+from smac import BlackBoxFacade, Scenario, Callback
+from smac.main.smbo import SMBO
+from smac.runhistory import TrialInfo, TrialValue
 from models import ErdosRenyi, GraphModel, ALL_MODELS
 from parameters import Parameter
 import sys
@@ -116,14 +117,26 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
     print('config is: ', config)
     return configspace
 
-# I had this for erdos renyi but it wasn't better: PARAM_NAME_TO_COST_THRESHOLD = { 'n': 10, 'd': 0.01, 'beta': np.inf, 't': np.inf}
 PARAM_NAME_TO_COST_THRESHOLD = { 'n': 100, 'd': 0.1, 'beta': np.inf, 't': np.inf}
-#TODO: explore more the termination_cost_threshold, or objective_limits, specifically the temperature
-def calc_cost_threshold(model_class: type[GraphModel])->list[float]:
-    termination_cost_threshold = []
-    for in_param in model_class.input_parameters():
-        termination_cost_threshold.append(PARAM_NAME_TO_COST_THRESHOLD[in_param.name()])
-    return termination_cost_threshold
+class TerminationCallback(Callback):
+    def build_threshold(self, input_parameters: list[Parameter]):
+        self.thresholds = [PARAM_NAME_TO_COST_THRESHOLD[param.name()] for param in input_parameters]
+
+
+    def on_tell_end(self, smbo: SMBO, info: TrialInfo, value: TrialValue) -> bool | None:
+        """Called after the stats are updated and the trial is added to the runhistory. Optionally, returns false
+        to gracefully stop the optimization.
+        """
+        for trial_value in smbo.runhistory.values():
+            costs_vector = trial_value.cost
+            if all(c <= t for c, t in zip(costs_vector, self.thresholds)):
+                # TODO: Add logging
+                print("Early stopping: all objectives below thresholds.")
+                #smbo.solver.terminate = True
+                #break
+                return False
+        return True
+        
 
 def uniObjective(n_trials: int):
     # Scenario object specifying the optimization environment
@@ -141,16 +154,16 @@ def multiObjective(n_trials: int, target_parameters: list[Parameter], model_clas
     target_function = target_function_generator(target_parameters, num_of_samples=num_of_samples, model_class=model_class)
     configspace = generate_config_space(target_parameters, model_class)
     objectives = [param.name() for param in model_class.input_parameters()]
-    termination_cost_threshold = calc_cost_threshold(model_class)
-     # termination_cost_threshold it stops when one of the objectives is below the cost (not all)
     scenario = Scenario(
         configspace,
         deterministic=True,
         n_trials=n_trials,
         objectives=objectives,
-        output_directory=os.path.join('smac_output', model_class.name()),
-        termination_cost_threshold=termination_cost_threshold)
-    smac = BlackBoxFacade(scenario, target_function=target_function)
+        output_directory=os.path.join('smac_output', model_class.name())
+        )
+    callback = TerminationCallback()
+    callback.build_threshold(model_class.input_parameters())
+    smac = BlackBoxFacade(scenario, target_function=target_function, callbacks=[callback])
     incumbent = smac.optimize()
     # print('*** Incumbent***')
     # print(incumbent)
@@ -165,8 +178,8 @@ def multiObjective(n_trials: int, target_parameters: list[Parameter], model_clas
 
     final_res = [param(avg_incumbent[param.name()]) for param in model_class.input_parameters()]
 
-    print('final res is: ', final_res)
-    print('Final cost:', target_function(avg_incumbent, seed=0))
+    # print('final res is: ', final_res)
+    # print('Final cost:', target_function(avg_incumbent, seed=0))
     return final_res
 
 # Function taken from ParameterFitterRunner
