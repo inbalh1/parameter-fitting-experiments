@@ -1,4 +1,4 @@
-networkit==10.0
+networkit==10.1
 
 ## For run
 filelock
