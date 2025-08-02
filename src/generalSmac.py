@@ -68,6 +68,9 @@ def target_function_generator(target_params: list[Parameter], num_of_samples: in
 
 def extract_params_from_config(config: Configuration, model_class: type[GraphModel],
                             cur_res:dict={}):
+    """
+    Get a smac config, extract parameters for the models and add them to the current result
+    """
     for param in model_class.input_parameters():
         param_name = param.name()
         if param_name in cur_res:
@@ -111,7 +114,7 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
             raise NotImplementedError()            
 
     # TODO: should add temprature here
-    # TODO: consider create a parameers extended class with this info
+    # TODO: consider create a parameers extended class with this info ( + thresholds )
     
     
     print('config is: ', config)
@@ -149,8 +152,14 @@ def uniObjective(n_trials: int):
     incumbent = smac.optimize()
     return incumbent
     
-def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], num_of_samples: int=10):
-    # TODO: would be nice to get exact output directory in here (including name of file)    
+def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], num_of_samples: int=10, output_directory:str="")->list[list[Parameter]]:
+    """
+    Runs the smac multi-objective optimization
+    Returns a list of all the resulting incumbents
+    """
+    if output_directory == "":
+        output_directory = os.path.join('smac_output', model_class.name())
+
     target_function = target_function_generator(target_parameters, num_of_samples=num_of_samples, model_class=model_class)
     configspace = generate_config_space(target_parameters, model_class)
     objectives = [param.name() for param in model_class.input_parameters()]
@@ -159,7 +168,7 @@ def multiObjective(n_trials: int, target_parameters: list[Parameter], model_clas
         deterministic=True,
         n_trials=n_trials,
         objectives=objectives,
-        output_directory=os.path.join('smac_output', model_class.name())
+        output_directory=output_directory
         )
     callback = TerminationCallback()
     callback.build_threshold(model_class.input_parameters())
@@ -168,22 +177,26 @@ def multiObjective(n_trials: int, target_parameters: list[Parameter], model_clas
     # print('*** Incumbent***')
     # print(incumbent)
 
-    # Taking average over resulting incumbents
-    avg_incumbent = {}
+    final_res = []
     for config in incumbent:
-        avg_incumbent = extract_params_from_config(config, model_class, avg_incumbent)
-
-    for param in model_class.input_parameters():
-        avg_incumbent[param.name()] /= len(incumbent)
-
-    final_res = [param(avg_incumbent[param.name()]) for param in model_class.input_parameters()]
-
-    # print('final res is: ', final_res)
-    # print('Final cost:', target_function(avg_incumbent, seed=0))
+        # TODO: shouldn't this be in the function of extracting params?
+        config_params = [param(config[param.name()]) for param in model_class.input_parameters()]
+        final_res.append(config_params)
     return final_res
 
+def writeResultsWrapper(fitted_parameters: list[list[Parameter]], output_file:str, *args, **kwargs):
+    """
+    Since smac might return multiple results, we take each one, and write is separately
+    """
+    for i, params in enumerate(fitted_parameters):
+        if len(fitted_parameters) > 1:
+            cur_output_file = f'{output_file.rsplit(".", 1)[0]}_{i}.{output_file.rsplit(".", 1)[1]}'
+        else:
+            cur_output_file = output_file
+        writeResults(params, cur_output_file, *args, **kwargs)
+
 # Function taken from ParameterFitterRunner
-def writeResults(fitted_parameters, output_file, model_class, target_features: list[Parameter], fitter_name):
+def writeResults(fitted_parameters: list[Parameter], output_file:str, model_class:type[GraphModel], target_features: list[Parameter], fitter_name: str):
     row_data = {}
     # row_data['Graph'] = param_dict['Graph']
     row_data['Fitter'] = fitter_name
@@ -215,6 +228,8 @@ def writeResults(fitted_parameters, output_file, model_class, target_features: l
         dict_writer.writerow(row_data)
 
 
+# TODO: consider writing a general local run (to run experiments, just without the run package,
+# which is parallel and without prints...)
 def local_run(model_name: str, mode: Literal['all', 'compact']='all'):
     import glob
     from collections import namedtuple
@@ -242,25 +257,29 @@ def local_run(model_name: str, mode: Literal['all', 'compact']='all'):
         print("param dict is: ", target_features)
         print("Input file: ", input_file)
         
-        # TODO: this should be the fitter class
         parameters = []
+        # TODO: make sure we compare to the target parameters (and not the input)
+        # TODO: this TODO is important
         parameter_classes = [input_param.output_parameter()
                              for input_param in model_class.input_parameters()]
         for parameter_class in parameter_classes:
             value = target_features[parameter_class.name()]
             parameter = parameter_class(value)
             parameters.append(parameter)
-        fitter = multiObjective(n_trials=100, target_parameters=parameters, model_class=model_class, num_of_samples=10)
+        output_directory = os.path.join(base_output, "smac_output", i)
+        fitter = multiObjective(
+            n_trials=100,
+            target_parameters=parameters,
+            model_class=model_class,
+            num_of_samples=10,
+            output_directory=output_directory)
         
-        #runner = ParameterFitterRunner(
-        #    param_dict, model_class, fitter_class, output_file, custom_fitter_config)
-        #runner.execute()
         fitted_parameters = fitter
-        writeResults(fitted_parameters, output_file, model_class, target_features=target_features, fitter_name="smac")
+        writeResultsWrapper(fitted_parameters, output_file, model_class, target_features=target_features, fitter_name="smac")
 
 if __name__ == '__main__':
-    #local_run(model_name='erdos-renyi')
-    local_run(model_name='chung-lu-pl', mode='compact')
+    local_run(model_name='erdos-renyi', mode='compact')
+    # local_run(model_name='chung-lu-pl', mode='compact')
 
 # Questions:
 # Target function

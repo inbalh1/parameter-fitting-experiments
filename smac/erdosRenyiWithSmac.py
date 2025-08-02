@@ -1,4 +1,5 @@
 # Trying to understand how to use SMAC
+# This file handles only Erdos Renyi, and isn't the most updated version of our SMAC usage
 from ConfigSpace import Configuration, ConfigurationSpace
 from smac import BlackBoxFacade
 from smac import Scenario
@@ -7,7 +8,7 @@ import sys
 from models import GraphModel, ErdosRenyi
 import parameters
 import csv
-# target function - I suppose this is this "evaluation function". They say that we want to minimize the value returned from this function
+# target function -this "evaluation function", whose returned value we want to minimize.
 # facade - there are several options, and they say its important
 
 
@@ -78,18 +79,13 @@ def multiObjective(n_trials, target_features, model_class: GraphModel):
 
     # Taking average over resulting configs
     # TODO: why are there several???
-    res = {}
-    for config in incumbent:
-        for param in model_class.input_parameters():
-            param_name = param.name()
-            if param_name in res:
-                res[param_name] += config[param_name]
-            else:
-                res[param_name] = config[param_name]
-    for param in model_class.input_parameters():
-        res[param.name()] /= len(incumbent)
 
-    return res
+    final_res = []
+    for config in incumbent:
+        # TODO: shouldn't this be in the function of extracting params?
+        config_params = [param(config['n']), param(config['d'])]
+        final_res.append(config_params)
+    return final_res
 
 
 def local_run(mode="all"):

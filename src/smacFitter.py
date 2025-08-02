@@ -16,18 +16,18 @@ import generalSmac
 
 class SmacFitter(ParameterFitter):
     def run(self):
-        # terget_parameters is a list[Parameter], target_features is a dict of the resulting features....
+        # target_parameters is a list[Parameter], target_features is a dict of the resulting features....
         print(self.target_parameters)
         n_trials = 100
         num_of_samples = 10
-        averaged_params = generalSmac.multiObjective(n_trials=n_trials,
+        smac_result = generalSmac.multiObjective(n_trials=n_trials,
             target_parameters=self.target_parameters,
             model_class=model_class,
             num_of_samples=num_of_samples)
 
-        #for param in params:
-        #    averaged_params.append(param.__class__(param.value))
-        return averaged_params
+        # Smac might return a few solutions. We take the first
+        # TODO: might want to take a random one, or all of them
+        return smac_result[0]
         
     def statistics(self)->None:
         return        
