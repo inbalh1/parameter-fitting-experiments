@@ -75,7 +75,7 @@ To run the maximum-likelihood estimation (MLE) procedure, follow these steps:
 **Make sure to run all training and test experiments for all models** before proceeding to the next step. The notebook depends on this data being available.
 
 2. **Open the Colab notebook**  
-Open the provided notebook (`mle_analysis.ipynb`) in [Google Colab](https://colab.research.google.com/) or locally in Jupyter.
+Open the provided notebook (`mle.ipynb`) in [Google Colab](https://colab.research.google.com/) or locally in Jupyter.
 
 3. **Update the base directory if needed**  
 If you're running the Colab notebook **in the cloud** or **from a different folder structure**, make sure to update the `base_dir` variable at the beginning of the notebook. It should point to the location of the MLE data generated in step 1, inside `output_data/target_params/mle`.
