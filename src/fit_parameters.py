@@ -117,4 +117,3 @@ if __name__ == "__main__":
     runner = ParameterFitterRunner(
         target_features, model_class, fitter_class, output_file, custom_fitter_config)
     runner.execute()
-    runner.writeResults()

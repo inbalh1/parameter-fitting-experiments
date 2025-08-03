@@ -6,7 +6,13 @@ Additional data can be found at https://doi.org/10.5281/zenodo.10629451.
 
 - Make sure you have Python, Pip and R installed.
 - Checkout this repository
-- Install the python dependencies with
+- (Recommended) Create a Conda environment using the provided `environment.yml` file:
+
+```
+conda env create -f environment.yml
+```
+
+- Alternatively, install the Python dependencies manually using Pip (better to run with python version 3.10 or 3.11):
 
 ```
 pip3 install -r requirements.txt
@@ -58,6 +64,23 @@ R -e 'install.packages(c("ggplot2", "reshape2", "plyr", "dplyr", "scales"), repo
 
 Run `Rscript R/<scriptname>` to run R scripts, found in the `R`subfolder. For example, run `Rscript R/erdos-renyi-ablation-alpha.R` to generate figures and tables related to the effect of the alpha configuration of ParFit for the ER model. The resulting figures and tables can be found in `output_data/figures`.
 
+## Running the Maximum-Likelihood Estimation (MLE)
+
+To run the maximum-likelihood estimation (MLE) procedure, follow these steps:
+
+1. **Run the MLE experiments to generate the data**  
+- Execute `python3 experiments-mle.py <experiment_name>` to generate training and test data. These experiments sample graphs and measure the resulting features. The experiments:
+  - `train_data_<model>`: generates training data
+  - `test_data_<model>`: generates test data
+**Make sure to run all training and test experiments for all models** before proceeding to the next step. The notebook depends on this data being available.
+
+2. **Open the Colab notebook**  
+Open the provided notebook (`mle_analysis.ipynb`) in [Google Colab](https://colab.research.google.com/) or locally in Jupyter.
+
+3. **Update the base directory if needed**  
+If you're running the Colab notebook **in the cloud** or **from a different folder structure**, make sure to update the `base_dir` variable at the beginning of the notebook. It should point to the location of the MLE data generated in step 1, inside `output_data/target_params/mle`.
+
+
 ## Structure of experiments output 
 Running the experiments generates output under the `output_data/` directory, organized by experiment type and model. Here's an overview:
 - **`sample_and_measure_<model>`**  
@@ -77,3 +100,13 @@ Running the experiments generates output under the `output_data/` directory, org
   - **`clean_graphs`**  
     Creates cleaned versions of networks in:
     - `input_data/clean/`
+
+- **MLE experiments (`train_data_<model>`, `test_data_<model>`)**  
+  Store generated data in:
+  - `output_data/target_params/mle/`
+
+- **MLE results (from the notebook):**  
+  The analysis results produced by the `ipynb` notebook are saved in the `output/` subdirectory inside the path defined by the `base_dir` variable.  
+  By default, this means:
+  - `output_data/target_params/mle/output/`  
+  If you run the notebook from a different location (e.g., in the cloud or another directory), make sure `base_dir` is set accordingly.

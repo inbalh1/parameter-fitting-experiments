@@ -1,6 +1,11 @@
+cython
 networkit==10.1
-
+  
 ## For run
 filelock
 tqdm
 pathos
+
+## For girg
+cmake>=3.15,<3.16
+powerlaw
