@@ -6,7 +6,13 @@ Additional data can be found at https://doi.org/10.5281/zenodo.10629451.
 
 - Make sure you have Python, Pip and R installed.
 - Checkout this repository
-- Install the python dependencies with
+- (Recommended) Create a Conda environment using the provided `environment.yml` file:
+
+```
+conda env create -f environment.yml
+```
+
+- Alternatively, install the Python dependencies manually using Pip (better to run with python version 3.10 or 3.11):
 
 ```
 pip3 install -r requirements.txt
@@ -57,3 +63,24 @@ R -e 'install.packages(c("ggplot2", "reshape2", "plyr", "dplyr", "scales"), repo
 # Running R scripts
 
 Run `Rscript R/<scriptname>` to run R scripts, found in the `R`subfolder. For example, run `Rscript R/erdos-renyi-ablation-alpha.R` to generate figures and tables related to the effect of the alpha configuration of ParFit for the ER model. The resulting figures and tables can be found in `output_data/figures`.
+
+
+## Structure of experiments output 
+Running the experiments generates output under the `output_data/` directory, organized by experiment type and model. Here's an overview:
+- **`sample_and_measure_<model>`**  
+  Stores results in:
+  - `output_data/target_params/`
+  - `output_data/attributes/`
+
+- **`fit_parameters_<model>`**  
+  Stores fitted parameters in:
+  - `output_data/fitted_params/`
+
+- **`fitted_sample_and_measure_<model>`**  
+  Stores feature measurements in:
+  - `output_data/fitted_features/`
+
+- **Real-world graph experiments:**
+  - **`clean_graphs`**  
+    Creates cleaned versions of networks in:
+    - `input_data/clean/`
