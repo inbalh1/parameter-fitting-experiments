@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
 import multiprocessing
-
 import numpy as np
+from models import GraphModel
+from parameters import Parameter
 
 
 class ParameterFitter(ABC):
