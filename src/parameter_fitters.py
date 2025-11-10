@@ -1,7 +1,5 @@
 from abc import ABC, abstractmethod
 import multiprocessing
-from models import GraphModel
-from parameters import Parameter
 
 import numpy as np
 

@@ -64,28 +64,6 @@ class ErdosRenyi(GraphModel):
     def name():
         return 'Erdos-Renyi'
 
-# Erdos renyi that provides also m (for MLE)
-class ErdosRenyiExtended(GraphModel):
-    @staticmethod
-    def input_parameters():
-        return NumberOfVertices, AverageDegree, NumberOfEdges
-
-    def _generate(self):
-        print('all parameters are: ', self.parameters)
-        n, d = map(lambda param: param.value, self.parameters)
-        n = int(n)
-        if n < 2:
-            p = 0
-        else:
-            p = d / (n - 1)
-        if self.seed is not None:
-            networkit.setSeed(seed=self.seed, useThreadId=False)
-        return networkit.generators.ErdosRenyiGenerator(n, p).generate()
-
-    @staticmethod
-    def name():
-        return 'Erdos-Renyi-Extended'
-
 
 class ChungLuPowerlaw(GraphModel):
     @staticmethod
@@ -166,4 +144,4 @@ class GIRG3D(GIRG, dimension=3):
     pass
 
 
-ALL_MODELS = [ErdosRenyi, ErdosRenyiExtended, ChungLuPowerlaw, GIRG1D]
+ALL_MODELS = [ErdosRenyi, ChungLuPowerlaw, GIRG1D]
