@@ -2,10 +2,9 @@
 import os
 import glob
 import run
-import multiprocessing
+from experimentsUtils import setup
 
-# Try using more than 1 core
-run.use_cores(max(1, multiprocessing.cpu_count() - 2))
+setup(is_colab=True)
 
 all_models = ["erdos-renyi", "chung-lu-pl", "girg-1d"]
 
