@@ -5,7 +5,7 @@ import networkit
 import multiprocessing
 
 from parameter_fitters import ParameterFitter, RobbinsMonroFinal
-from models import GraphModel
+from models import GraphModel, ALL_MODELS
 
 
 
