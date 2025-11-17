@@ -13,7 +13,6 @@ class MLEFitter(ParameterFitter):
         # TODO: still not sure what all of these params means...
         params = list(in_param.input_guess(target_param) for in_param, target_param in zip(
             self.model.input_parameters(), self.target_parameters))
-        print('params are: ', params)
         n, d, m = params
         d = d.__class__(self.calc_d(n.value, d.value, m.value))
         n = n.__class__(int(n.value))

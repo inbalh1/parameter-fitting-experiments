@@ -1,11 +1,11 @@
 import csv
 import argparse
 from pathlib import Path
+import networkit
+import multiprocessing
 
 from parameter_fitters import ParameterFitter, RobbinsMonroFinal
-import multiprocessing
-from models import *
-from parameters import *
+from models import GraphModel, ALL_MODELS
 
 
 class ParameterFitterRunner:

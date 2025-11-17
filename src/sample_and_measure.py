@@ -2,9 +2,11 @@ import csv
 import argparse
 from pathlib import Path
 import sys
+import random
+import networkit
 
-from models import *
-from parameters import *
+from models import ALL_MODELS
+from parameters import NumberOfVertices, NumberOfEdges, AverageDegree, PowerlawBeta, Temperature
 
 
 class GraphSamplerAndMeasurer():
