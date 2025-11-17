@@ -10,7 +10,7 @@ def setup(is_colab=False):
 
     # For google colab - to import pygirgs.
 
-    if is_colab:
-        import os
-        os.environ["PYTHONPATH"] = os.path.abspath("src/pygirgs")
+    #if is_colab:
+    #    import os
+    #    os.environ["PYTHONPATH"] = os.path.abspath("src/pygirgs")
 
