@@ -103,9 +103,9 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
             ))
         elif in_param.name() == 'd':
             config['d'] = (1, 15)
-            configspace.add(CategoricalHyperparameter(
+            configspace.add(OrdinalHyperparameter(
                 "d",
-                choices=list(range(1, 15))
+                sequence=list(range(1, 15))
             ))
         elif in_param.name() == 'beta':
             config['beta'] = (2, 3)

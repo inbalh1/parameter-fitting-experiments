@@ -1,12 +1,12 @@
 # Trying to understand how to use SMAC
 # This file handles only Erdos Renyi, and isn't the most updated version of our SMAC usage
-from ConfigSpace import Configuration, ConfigurationSpace
+from ConfigSpace import Configuration, ConfigurationSpace, OrdinalHyperparameter
 from smac import BlackBoxFacade
 from smac import Scenario
 
 import sys
 from models import GraphModel, ErdosRenyi
-import parameters
+from parameters import Parameter, NumberOfVertices, AverageDegree
 import csv
 # target function -this "evaluation function", whose returned value we want to minimize.
 # facade - there are several options, and they say its important
@@ -24,8 +24,8 @@ debug = False
 def target_function_generator(target_params, model_class=None):
     # This target function suppose to work for any model class
     def target_function(config: Configuration, seed: int):
-        n = parameters.NumberOfVertices(config["n"])
-        d = parameters.AverageDegree(config["d"])
+        n = NumberOfVertices(config["n"])
+        d = AverageDegree(config["d"])
         model = model_class(n, d)
         if debug:
             print('Input: ', n, d)
@@ -54,12 +54,24 @@ def target_function_generator(target_params, model_class=None):
     return target_function
 
 
-# TODO: should check whether we have something like that
 # Configuration space for Erdos renyi
-configspace = ConfigurationSpace({
-    "n": (1000, 10000),
-    "d": (2, 10)
-})
+#configspace = ConfigurationSpace({
+#    "n": (1000, 10000),
+#    "d": (2, 10)
+#})
+configspace = ConfigurationSpace()
+#n = float(target_param.value)
+#max_value = int(math.floor(n + math.sqrt(n))) + 1
+#min_value = math.floor(n)
+configspace.add(
+        OrdinalHyperparameter(
+        "n",
+        sequence=list(range(1000, 10000))  
+        ))        
+configspace.add(OrdinalHyperparameter(
+    "d",
+        sequence=list(range(1, 15))
+    ))
 
 def uniObjective(n_trials):
     # Scenario object specifying the optimization environment
@@ -69,7 +81,21 @@ def uniObjective(n_trials):
     incumbent = smac.optimize()
     return incumbent
     
-def multiObjective(n_trials, target_features, model_class: GraphModel):
+def extract_res_from_incumbent(incumbent, mode='first')->list[list[Parameter]]:
+    if mode == 'first':
+        config = incumbent[0]
+        config_params = [NumberOfVertices(config['n']), AverageDegree(config['d'])]
+        return [config_params]
+    if mode == 'all':
+        final_res = []
+        for config in incumbent:
+            # TODO: shouldn't this be in the function of extracting params?
+            config_params = [NumberOfVertices(config['n']), AverageDegree(config['d'])]
+            final_res.append(config_params)
+        return final_res
+        
+    
+def multiObjective(n_trials, target_features, model_class: GraphModel) -> list[list[Parameter]]:
     target_function = target_function_generator(target_features, model_class)
     scenario = Scenario(configspace, deterministic=True, n_trials=n_trials, objectives=["n", "d"])
     smac = BlackBoxFacade(scenario, target_function=target_function)
@@ -80,12 +106,51 @@ def multiObjective(n_trials, target_features, model_class: GraphModel):
     # Taking average over resulting configs
     # TODO: why are there several???
 
-    final_res = []
-    for config in incumbent:
-        # TODO: shouldn't this be in the function of extracting params?
-        config_params = [param(config['n']), param(config['d'])]
-        final_res.append(config_params)
-    return final_res
+    return extract_res_from_incumbent(incumbent)
+
+def writeResultsWrapper(fitted_parameters: list[list[Parameter]], output_file:str, *args, **kwargs):
+    """
+    Since smac might return multiple results, we take each one, and write is separately
+    """
+    for i, params in enumerate(fitted_parameters):
+        if len(fitted_parameters) > 1:
+            cur_output_file = f'{output_file.rsplit(".", 1)[0]}_{i}.{output_file.rsplit(".", 1)[1]}'
+        else:
+            cur_output_file = output_file
+        writeResults(params, cur_output_file, *args, **kwargs)
+
+# Function taken from ParameterFitterRunner
+def writeResults(fitted_parameters: list[Parameter], output_file:str, model_class:type[GraphModel], target_features: list[Parameter], fitter_name: str):
+    row_data = {}
+    # row_data['Graph'] = param_dict['Graph']
+    row_data['Fitter'] = fitter_name
+
+    parameter_classes = [NumberOfVertices, AverageDegree]
+    for parameter_class in parameter_classes:
+        value = target_features[parameter_class.name()]
+        parameter = parameter_class(value)
+        row_data['target_' + parameter_class.name()] = parameter.value
+
+    for fitted_param in fitted_parameters:
+        row_data[fitted_param.name()] = fitted_param.value
+
+    # averaging_iterations, total_iterations, flips = fitter.statistics()
+    # smoothing_iterations = total_iterations - averaging_iterations
+    # row_data['averaging_iterations'] = averaging_iterations
+    # row_data['smoothing_iterations'] = smoothing_iterations
+    # row_data['total_iterations'] = total_iterations
+    # for flip_count, param in zip(flips, parameter_classes):
+    #     row_data['flips_' + param.name()] = flip_count
+    # for key, value in self.custom_fitter_config.items():
+    #     row_data[key] = value
+
+    with open(output_file, "w") as results_file:
+        fieldnames = sorted(set(row_data.keys()))
+        dict_writer = csv.DictWriter(results_file, fieldnames)
+        dict_writer.writeheader()
+        dict_writer.writerow(row_data)
+
+
 
 
 def local_run(mode="all"):
@@ -98,6 +163,8 @@ def local_run(mode="all"):
     
     if mode == "compact":
         input_files = input_files[:1]
+    if mode == "medium":
+        input_files = input_files[:10]
     base_input = '../output_data/target_params/erdos-renyi'
     base_output = f"../output_data/fitted_params/smac/{model}"
     #Args = namedtuple("Args", ["model", "input_file", "output_file"])
@@ -106,6 +173,7 @@ def local_run(mode="all"):
     for i in input_files:
         input_file = os.path.join(base_input, f'{i}.csv')
         output_file = os.path.join(base_output, f'{i}.csv')
+        print(f"input file: {input_file}")
 
 
         
@@ -122,14 +190,15 @@ def local_run(mode="all"):
 
         # TODO: this should be the fitter class
         fitter = multiObjective(n_trials=10, target_features=param_dict, model_class=model_class)
-        # TODO: what to do with the output??
+        fitted_parameters = fitter
+        writeResultsWrapper(fitted_parameters, output_file, model_class, target_features=param_dict, fitter_name="smac")
         #runner = ParameterFitterRunner(
         #    param_dict, model_class, fitter_class, output_file, custom_fitter_config)
         #runner.execute()
 
 
 print("Starting local run")
-local_run("compact")
+local_run()
 
 # Questions:
 # The configuration space
