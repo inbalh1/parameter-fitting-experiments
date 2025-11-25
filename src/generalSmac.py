@@ -152,14 +152,12 @@ def uniObjective(n_trials: int):
     incumbent = smac.optimize()
     return incumbent
     
-def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], num_of_samples: int=10, output_directory:str="")->list[list[Parameter]]:
+def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], output_directory:str, num_of_samples: int=10)->list[list[Parameter]]:
     """
     Runs the smac multi-objective optimization
+    Notice output_directory should be unique for each input file
     Returns a list of all the resulting incumbents
     """
-    if output_directory == "":
-        output_directory = os.path.join('smac_output', model_class.name())
-
     target_function = target_function_generator(target_parameters, num_of_samples=num_of_samples, model_class=model_class)
     configspace = generate_config_space(target_parameters, model_class)
     objectives = [param.name() for param in model_class.input_parameters()]

@@ -75,7 +75,11 @@ configspace.add(OrdinalHyperparameter(
 
 def uniObjective(n_trials):
     # Scenario object specifying the optimization environment
-    scenario = Scenario(configspace, deterministic=True, n_trials=n_trials)
+    scenario = Scenario(
+        configspace,
+        deterministic=True,
+        n_trials=n_trials
+        )
     # Use SMAC to find the best configuration/hyperparameters
     smac = BlackBoxFacade(scenario, target_function=target1)
     incumbent = smac.optimize()
@@ -97,7 +101,13 @@ def extract_res_from_incumbent(incumbent, mode='first')->list[list[Parameter]]:
     
 def multiObjective(n_trials, target_features, model_class: GraphModel) -> list[list[Parameter]]:
     target_function = target_function_generator(target_features, model_class)
-    scenario = Scenario(configspace, deterministic=True, n_trials=n_trials, objectives=["n", "d"])
+    scenario = Scenario(
+        configspace,
+        deterministic=True,
+        n_trials=n_trials,
+        objectives=["n", "d"],
+        output_directory=f"smac3_output/{target_features['n']}_{target_features['d']}"
+        )
     smac = BlackBoxFacade(scenario, target_function=target_function)
     incumbent = smac.optimize()
     print('*** Incumbent***')
@@ -149,8 +159,6 @@ def writeResults(fitted_parameters: list[Parameter], output_file:str, model_clas
         dict_writer = csv.DictWriter(results_file, fieldnames)
         dict_writer.writeheader()
         dict_writer.writerow(row_data)
-
-
 
 
 def local_run(mode="all"):
