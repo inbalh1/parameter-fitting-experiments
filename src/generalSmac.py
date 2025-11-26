@@ -14,6 +14,9 @@ from typing import Literal
 # facade - there are several options, and they say its important
 
 
+n_trials = 100
+num_of_samples = 10
+
 # TODO: can write the code in a more general way, to combine with the other experiments (the smac should be just the fitter I guess)
 def append_params(accumulated_params: list, cur_params: list):
     if not accumulated_params:
@@ -30,7 +33,7 @@ def compare_param(param: Parameter, target_param: Parameter):
 
 
 
-def target_function_generator(target_params: list[Parameter], num_of_samples: int=2, model_class: type[GraphModel]=None):    
+def target_function_generator(target_params: list[Parameter], num_of_samples: int, model_class: type[GraphModel]=None):    
     # Generates a target function for a specific input graph (works for any model)
     def target_function(config: Configuration, seed: int):
         # This is the evaluation function, that given a certain configuration,
@@ -152,6 +155,33 @@ def uniObjective(n_trials: int):
     incumbent = smac.optimize()
     return incumbent
     
+def config_to_params(config: Configuration, model_class: type[GraphModel])->list[Parameter]:
+    """
+    Takes a configuration, returns as a list of parameters according to the model's input parameters
+    """
+    return [param(config[param.name()]) for param in model_class.input_parameters()]
+    
+    
+def extract_res_from_incumbent(incumbent, model_class: type[GraphModel], mode='avg')->list[list[Parameter]]:
+    final_res = []
+    if mode == 'first':
+        final_res = [config_to_params(incumbent[0], model_class)]
+    if mode == 'all':
+        for config in incumbent:
+            config_params = config_to_params(config, model_class)
+            final_res.append(config_params)
+    if mode == 'avg':
+        avg_incumbent = {}
+        for config in incumbent:
+            avg_incumbent = extract_params_from_config(config, model_class, avg_incumbent)
+
+        for param in model_class.input_parameters():
+            avg_incumbent[param.name()] /= len(incumbent)
+
+        final_res = [param(avg_incumbent[param.name()]) for param in model_class.input_parameters()]
+
+    return final_res
+    
 def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], output_directory:str, num_of_samples: int=10)->list[list[Parameter]]:
     """
     Runs the smac multi-objective optimization
@@ -175,12 +205,7 @@ def multiObjective(n_trials: int, target_parameters: list[Parameter], model_clas
     # print('*** Incumbent***')
     # print(incumbent)
 
-    final_res = []
-    for config in incumbent:
-        # TODO: shouldn't this be in the function of extracting params?
-        config_params = [param(config[param.name()]) for param in model_class.input_parameters()]
-        final_res.append(config_params)
-    return final_res
+    return extract_res_from_incumbent(incumbent, model_class)
 
 def writeResultsWrapper(fitted_parameters: list[list[Parameter]], output_file:str, *args, **kwargs):
     """
@@ -266,10 +291,10 @@ def local_run(model_name: str, mode: Literal['all', 'compact']='all'):
             parameters.append(parameter)
         output_directory = os.path.join(base_output, "smac_output", i)
         fitter = multiObjective(
-            n_trials=100,
+            n_trials=n_trials,
             target_parameters=parameters,
             model_class=model_class,
-            num_of_samples=10,
+            num_of_samples=num_of_samples,
             output_directory=output_directory)
         
         fitted_parameters = fitter
