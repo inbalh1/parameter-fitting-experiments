@@ -8,29 +8,12 @@ run.use_cores(multiprocessing.cpu_count() - 2)
 
 # The goal is to compare the erdos-renyi results for the optimal solution of MLE
 
-# The same sample_and_measure experiment from before
-run.add(
-    "sample_and_measure_[[model]]",
-    "python3 src/sample_and_measure.py --model [[model]] --seed [[seed]] --n [[n]] --d [[d]] --samples [[samples]] --combine --output_file [[file]]",
-    {
-        "n": list(range(1000, 10000+1, 500)),
-        "d": list(range(2, 10+1)),
-        "seed": [993],
-        "samples": 50,
-        "name": "[[model]]_n=[[n]]_d=[[d]]_seed=[[seed]]",
-        "file": "output_data/target_params/[[model]]/[[name]].csv",
-        "model": "erdos-renyi"
-    },
-    stdout_file="output_data/attributes/[[model]]/[[name]].csv"
-)
-
-
-
-run.run()
+# To create target params - run from the other experiments files (models for synthetic, konect for real graphs)
 
 
 all_models = ["erdos-renyi", "chung-lu-pl", "girg-1d"]
 
+# MLE is old
 # Notice the use of the extended model - is just because we assume for the MLE that we've got number of edges as well...
 model = "erdos-renyi"
 run.add(
@@ -63,6 +46,23 @@ for model in all_models:
 run.run()
 
 
+for model in all_models:
+    run.add(
+        "fitted_sample_and_measure_[[model]]",
+        "python3 src/sample_and_measure.py --model [[model]] --seed [[seed]] --samples [[samples]] --input_file output_data/fitted_params/smac/[[model]]/[[input]].csv --output_file [[file]]",
+        {
+            "model": model,
+            "seed": [9381],
+            "samples": 50,
+            "input": [os.path.splitext(os.path.basename(f))[0] for f in glob.glob(f"output_data/fitted_params/smac/{model}/*")],
+            "file": "output_data/fitted_features/smac/[[model]]/[[input]].csv",
+        },
+        creates_file="[[file]]",
+    )
+run.run()
+
+
+# TODO: why doesn't this work (instead of the previous one???)
 # Generate samples based on fitted parameters
 # Not sure whether in here I need the model extended
 all_fitters = ['MLE', 'smac']

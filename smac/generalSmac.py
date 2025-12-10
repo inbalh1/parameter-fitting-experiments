@@ -1,5 +1,5 @@
 # Trying to understand how to use SMAC
-from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter, OrdinalHyperparameter, UniformFloatHyperparameter
+from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter, OrdinalHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter
 from smac import BlackBoxFacade, Scenario, Callback
 from smac.main.smbo import SMBO
 from smac.runhistory import TrialInfo, TrialValue
@@ -10,12 +10,15 @@ import os
 import csv
 import math
 import numpy as np
-from typing import Literal
+from typing import Literal, TypeAlias
+import random
 # facade - there are several options, and they say its important
 
 
-n_trials = 100
-num_of_samples = 10
+n_trials = 60
+num_of_samples = 30
+
+FittedParameters:TypeAlias = list[list[Parameter]]
 
 # TODO: can write the code in a more general way, to combine with the other experiments (the smac should be just the fitter I guess)
 def append_params(accumulated_params: list, cur_params: list):
@@ -61,10 +64,15 @@ def target_function_generator(target_params: list[Parameter], num_of_samples: in
         # If target_params was a list:
         final_res = list(compare_param(out_param, target_param) for out_param, target_param in zip(
            avg_output_params, target_params))
-        # final_res = [compare_param(param, target_params) for param in avg_output_params]
+           
+           
+        # This was a failed attempt
+        #final_res = {target_param.name(): compare_param(out_param, target_param) for out_param, target_param in zip(
+        #   avg_output_params, target_params)}
+        #final_res['n'] = 500 * final_res['n']
+        
         # print("*** Final res: ")
         # print(final_res)
-        # Return the targets
         return final_res
     return target_function
 
@@ -100,16 +108,13 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
             min_value = math.floor(n)
             config['n'] = (min_value , max_value)
             configspace.add(
-                OrdinalHyperparameter(
-                "n",
-                sequence=list(range(min_value, max_value))  
-            ))
+                UniformIntegerHyperparameter(
+                "n", lower=min_value, upper=max_value)  
+            )
         elif in_param.name() == 'd':
             config['d'] = (1, 15)
-            configspace.add(OrdinalHyperparameter(
-                "d",
-                sequence=list(range(1, 15))
-            ))
+            configspace.add(
+                UniformFloatHyperparameter("d", lower=1, upper=15))
         elif in_param.name() == 'beta':
             config['beta'] = (2, 3)
             configspace.add(UniformFloatHyperparameter("beta", lower=2, upper=3))
@@ -162,10 +167,14 @@ def config_to_params(config: Configuration, model_class: type[GraphModel])->list
     return [param(config[param.name()]) for param in model_class.input_parameters()]
     
     
-def extract_res_from_incumbent(incumbent, model_class: type[GraphModel], mode='avg')->list[list[Parameter]]:
+# TODO: get rid of avg mode
+def extract_res_from_incumbent(incumbent, model_class: type[GraphModel], mode='random')->FittedParameters:
     final_res = []
     if mode == 'first':
         final_res = [config_to_params(incumbent[0], model_class)]
+    if mode == 'random':
+        chosen_incumbent = random.choice(incumbent)
+        final_res = [config_to_params(chosen_incumbent, model_class)]
     if mode == 'all':
         for config in incumbent:
             config_params = config_to_params(config, model_class)
@@ -178,11 +187,11 @@ def extract_res_from_incumbent(incumbent, model_class: type[GraphModel], mode='a
         for param in model_class.input_parameters():
             avg_incumbent[param.name()] /= len(incumbent)
 
-        final_res = [param(avg_incumbent[param.name()]) for param in model_class.input_parameters()]
+        final_res = [[param(avg_incumbent[param.name()]) for param in model_class.input_parameters()]]
 
     return final_res
     
-def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], output_directory:str, num_of_samples: int=10)->list[list[Parameter]]:
+def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], output_directory:str, num_of_samples: int=10)->tuple[FittedParameters, int]:
     """
     Runs the smac multi-objective optimization
     Notice output_directory should be unique for each input file
@@ -204,10 +213,29 @@ def multiObjective(n_trials: int, target_parameters: list[Parameter], model_clas
     incumbent = smac.optimize()
     # print('*** Incumbent***')
     # print(incumbent)
+    
+    # TODO: we can get more info on the run using smac
+    #
+    # All evaluated configurations (perhaps can be used to determine best budget)
+    # for config, info in runhistory.data.items():
+    #    print("Config:", config)
+    #    print("Obj values:", info.cost)
+    # Some extra info
+    runhistory = smac.runhistory
+    used_budget = len(runhistory._data)
+    #print('Total used budget: ', used_budget)
+    # This yields all configs, perhaps can look at their costs for diminishing returns of budget...
+    #print(runhistory._data)
+    # Cost of a specific config:
+    #for config in incumbent:
+    #    print('Cost: ', runhistory.get_cost(config))
+    #used_trials = smac.stats.ta_runs
+    
 
-    return extract_res_from_incumbent(incumbent, model_class)
 
-def writeResultsWrapper(fitted_parameters: list[list[Parameter]], output_file:str, *args, **kwargs):
+    return extract_res_from_incumbent(incumbent, model_class), used_budget
+
+def writeResultsWrapper(fitted_parameters: [Parameter], output_file:str, *args, **kwargs):
     """
     Since smac might return multiple results, we take each one, and write is separately
     """
@@ -219,10 +247,11 @@ def writeResultsWrapper(fitted_parameters: list[list[Parameter]], output_file:st
         writeResults(params, cur_output_file, *args, **kwargs)
 
 # Function taken from ParameterFitterRunner
-def writeResults(fitted_parameters: list[Parameter], output_file:str, model_class:type[GraphModel], target_features: list[Parameter], fitter_name: str):
+def writeResults(fitted_parameters: list[Parameter], output_file:str, model_class:type[GraphModel], target_features: list[Parameter], fitter_name: str, used_budget: int):
     row_data = {}
     # row_data['Graph'] = param_dict['Graph']
     row_data['Fitter'] = fitter_name
+    row_data['used_budget'] = used_budget
 
     parameter_classes = [input_param.output_parameter()
                             for input_param in model_class.input_parameters()]
@@ -297,11 +326,11 @@ def local_run(model_name: str, mode: Literal['all', 'compact']='all'):
             num_of_samples=num_of_samples,
             output_directory=output_directory)
         
-        fitted_parameters = fitter
-        writeResultsWrapper(fitted_parameters, output_file, model_class, target_features=target_features, fitter_name="smac")
+        fitted_parameters, used_budget = fitter
+        writeResultsWrapper(fitted_parameters, output_file, model_class, target_features=target_features, fitter_name="smac", used_budget=used_budget)
 
 if __name__ == '__main__':
-    local_run(model_name='erdos-renyi', mode='compact')
+    local_run(model_name='erdos-renyi', mode='all')
     # local_run(model_name='chung-lu-pl', mode='compact')
 
 # Questions:

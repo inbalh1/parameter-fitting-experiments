@@ -5,12 +5,15 @@ from smac import BlackBoxFacade
 from smac import Scenario
 
 import sys
+import math
 from models import GraphModel, ErdosRenyi
 from parameters import Parameter, NumberOfVertices, AverageDegree
 import csv
 # target function -this "evaluation function", whose returned value we want to minimize.
 # facade - there are several options, and they say its important
 
+n_trials = 20
+num_of_samples = 10
 
 # TODO: can write the code in a more general way, to combine with the other experiments (the smac should be just the fitter I guess)
 def append_params(accumulated_params: list, cur_params: list):
@@ -21,16 +24,15 @@ def append_params(accumulated_params: list, cur_params: list):
     return accumulated_params
 
 debug = False
-def target_function_generator(target_params, model_class=None):
+def target_function_generator(target_params):
     # This target function suppose to work for any model class
     def target_function(config: Configuration, seed: int):
         n = NumberOfVertices(config["n"])
         d = AverageDegree(config["d"])
-        model = model_class(n, d)
+        model = ErdosRenyi(n, d)
         if debug:
             print('Input: ', n, d)
 
-        num_of_samples = 2
         accumulated_params = {'n': 0, 'd': 0}
         for i in range(num_of_samples):
             g = model.generate()
@@ -55,23 +57,39 @@ def target_function_generator(target_params, model_class=None):
 
 
 # Configuration space for Erdos renyi
-#configspace = ConfigurationSpace({
-#    "n": (1000, 10000),
-#    "d": (2, 10)
-#})
-configspace = ConfigurationSpace()
-#n = float(target_param.value)
-#max_value = int(math.floor(n + math.sqrt(n))) + 1
-#min_value = math.floor(n)
-configspace.add(
+#configspace = ConfigurationSpace()
+#configspace.add(
+#        OrdinalHyperparameter(
+#        "n",
+#        sequence=list(range(1000, 10000))  
+#        ))        
+#configspace.add(OrdinalHyperparameter(
+#    "d",
+#        sequence=list(range(1, 15))
+#    ))
+    
+
+def generate_config_space(target_parameters: list[Parameter]) -> ConfigurationSpace:
+    # Generate the configuration space, based on the input graph and model
+    config = {}
+    configspace = ConfigurationSpace()
+
+    target_n = target_parameters['n']
+    n = float(target_n)
+    max_value = int(math.floor(n + math.sqrt(n))) + 1
+    min_value = math.floor(n)
+    configspace.add(
         OrdinalHyperparameter(
         "n",
-        sequence=list(range(1000, 10000))  
-        ))        
-configspace.add(OrdinalHyperparameter(
-    "d",
-        sequence=list(range(1, 15))
+        sequence=list(range(min_value, max_value))  
     ))
+
+    target_d = target_parameters['d']
+    configspace.add(OrdinalHyperparameter(
+        "d",
+        sequence=list(range(1, 15))
+    ))    
+    return configspace
 
 def uniObjective(n_trials):
     # Scenario object specifying the optimization environment
@@ -85,7 +103,7 @@ def uniObjective(n_trials):
     incumbent = smac.optimize()
     return incumbent
     
-def extract_res_from_incumbent(incumbent, mode='first')->list[list[Parameter]]:
+def extract_res_from_incumbent(incumbent, mode='all')->list[list[Parameter]]:
     if mode == 'first':
         config = incumbent[0]
         config_params = [NumberOfVertices(config['n']), AverageDegree(config['d'])]
@@ -99,8 +117,9 @@ def extract_res_from_incumbent(incumbent, mode='first')->list[list[Parameter]]:
         return final_res
         
     
-def multiObjective(n_trials, target_features, model_class: GraphModel) -> list[list[Parameter]]:
-    target_function = target_function_generator(target_features, model_class)
+def multiObjective(n_trials, target_features) -> list[list[Parameter]]:
+    target_function = target_function_generator(target_features)
+    configspace = generate_config_space(target_features)
     scenario = Scenario(
         configspace,
         deterministic=True,
@@ -182,8 +201,6 @@ def local_run(mode="all"):
         input_file = os.path.join(base_input, f'{i}.csv')
         output_file = os.path.join(base_output, f'{i}.csv')
         print(f"input file: {input_file}")
-
-
         
         #fitter_class = MLEFitter
         custom_fitter_config = {}
@@ -197,7 +214,7 @@ def local_run(mode="all"):
             param_dict = param_dict[0]
 
         # TODO: this should be the fitter class
-        fitter = multiObjective(n_trials=10, target_features=param_dict, model_class=model_class)
+        fitter = multiObjective(n_trials=n_trials, target_features=param_dict)
         fitted_parameters = fitter
         writeResultsWrapper(fitted_parameters, output_file, model_class, target_features=param_dict, fitter_name="smac")
         #runner = ParameterFitterRunner(
