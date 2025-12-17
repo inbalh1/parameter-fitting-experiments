@@ -64,7 +64,7 @@ for model in all_models:
         f"python3 src/fit_parameters.py --model [[model]] {fit_input_path}/[[input]].csv [[file]]",
         {
             "input": [os.path.splitext(os.path.basename(f))[0] for f in glob.glob(f"{fit_input_path}/*")],
-            "file": f"{fit_output_path}-[[model]]/[[input]].csv",
+            "file": f"{fit_output_path}/[[model]]/[[input]].csv",
             "model": model
         },
         creates_file="[[file]]",
@@ -79,13 +79,13 @@ features_output_path = 'output_data/fitted_features/brain'
 for model in all_models:
     run.add(
         "fitted_sample_and_measure_[[model]]",
-        f"python3 src/sample_and_measure.py --model [[model]] --seed [[seed]] --samples [[samples]] --input_file {features_input_path}-[[model]]/[[input]].csv --output_file [[file]]",
+        f"python3 src/sample_and_measure.py --model [[model]] --seed [[seed]] --samples [[samples]] --input_file {features_input_path}/[[model]]/[[input]].csv --output_file [[file]]",
         {
             "model": model,
             "seed": [9381],
             "samples": 50,
             "input": [os.path.splitext(os.path.basename(f))[0] for f in glob.glob(f"{features_input_path}-{model}/*")],
-            "file": f"{features_output_path}-[[model]]/[[input]].csv",
+            "file": f"{features_output_path}/[[model]]/[[input]].csv",
         },
         creates_file="[[file]]",
     )
@@ -93,8 +93,11 @@ for model in all_models:
 run.run()
 
 # names of all output stats (might have changed by previous runs)
+# TODO: does it work like this?
 output_names = [
-    os.path.dirname(dir) for dir in glob.glob("output_data/*/*/")
+    os.path.dirname(dir) for dir in glob.glob("output_data/*/brain/*/")
+] + [
+    os.path.dirname(dir) for dir in glob.glob("output_data/*/brain/")
 ]
 
 ######################################################################
