@@ -1,5 +1,7 @@
 cython
 networkit==10.1
+pandas
+seaborn
   
 ## For run
 filelock

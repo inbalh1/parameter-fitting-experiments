@@ -6,6 +6,8 @@ dependencies:
   - python=3.11
   - networkit=10.1
   - cython
+  - pandas
+  - seaborn
   - filelock
   - tqdm
   - pathos
