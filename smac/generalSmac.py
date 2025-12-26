@@ -36,7 +36,7 @@ def compare_param(param: Parameter, target_param: Parameter):
 
 
 
-def target_function_generator(target_params: list[Parameter], num_of_samples: int, model_class: type[GraphModel]=None):    
+def target_function_generator(target_params: list[Parameter], num_of_samples: int, model_class: type[GraphModel]=None, params_weights: dict=None, is_multi_obj: bool=True):
     # Generates a target function for a specific input graph (works for any model)
     def target_function(config: Configuration, seed: int):
         # This is the evaluation function, that given a certain configuration,
@@ -53,24 +53,20 @@ def target_function_generator(target_params: list[Parameter], num_of_samples: in
             g = model.generate()
             cur_output_params = model.measure_output_parameters(g)
             accumulated_params = append_params(accumulated_params, cur_output_params)
-            # print("output params are: ")
-            # print(cur_output_params)
 
-        # print('Accumulated: ', accumulated_params)
-        # print('target: ', target_params)
         avg_output_params = [param.__class__(param.value / num_of_samples) for param in accumulated_params]
         # print(' avg output: ', avg_output_params)
 
-        # If target_params was a list:
-        final_res = list(compare_param(out_param, target_param) for out_param, target_param in zip(
-           avg_output_params, target_params))
+        # Get cost for each output parameter (= feature)
+        params_costs = {out_param.name(): compare_param(out_param, target_param) for out_param, target_param in zip(
+           avg_output_params, target_params)}
            
-           
-        # This was a failed attempt
-        #final_res = {target_param.name(): compare_param(out_param, target_param) for out_param, target_param in zip(
-        #   avg_output_params, target_params)}
-        #final_res['n'] = 500 * final_res['n']
-        
+        if is_multi_obj:
+            # Return a list of all the costs
+            final_res = list(params_costs.values())
+        else:
+            # Return a weighted sum of the costs
+            final_res = sum(cost * params_weights[param] for param, cost in params_costs.items())
         # print("*** Final res: ")
         # print(final_res)
         return final_res
@@ -90,9 +86,34 @@ def extract_params_from_config(config: Configuration, model_class: type[GraphMod
             cur_res[param_name] = config[param_name]
     return cur_res
 
+def generate_weights(target_parameters: list[Parameter], model_class: type[GraphModel]) -> dict:
+    # Calculate the weight for each parameter in the cost function
+    # TODO: this function basically does the same thing as the next one (to generate configuration space)
+    # TODO2: perhaps this should get configuration space and go over it...
+    weights = {}
+
+    for in_param, target_param in zip(
+            model_class.input_parameters(), target_parameters):
+        if in_param.name() == 'n':
+            n = float(target_param.value)
+            max_value = int(math.floor(n + math.sqrt(n))) + 1
+            min_value = math.floor(n)
+            weights['n'] = 1 / (max_value - min_value)
+        elif in_param.name() == 'd':
+            #'config['d'] = (1, 15)
+            weights['d'] = 1 / 14
+        elif in_param.name() == 'beta':
+            # config['beta'] = (2, 3)
+            weights['beta'] = 1
+        else:
+            raise NotImplementedError()            
+    print('Weights are: ', weights)
+    return weights
+
+
 def generate_config_space(target_parameters: list[Parameter], model_class: type[GraphModel]) -> ConfigurationSpace:
     # Generate the configuration space, based on the input graph and model
-
+    # Example output:
     # configspace = ConfigurationSpace({
     #     "n": (1000, 15000),
     #     "d": (1, 15)
@@ -129,6 +150,7 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
     return configspace
 
 PARAM_NAME_TO_COST_THRESHOLD = { 'n': 100, 'd': 0.1, 'beta': np.inf, 't': np.inf}
+# TODO: does termination callback ever have effect?
 class TerminationCallback(Callback):
     def build_threshold(self, input_parameters: list[Parameter]):
         self.thresholds = [PARAM_NAME_TO_COST_THRESHOLD[param.name()] for param in input_parameters]
@@ -149,7 +171,7 @@ class TerminationCallback(Callback):
         return True
         
 
-def uniObjective(n_trials: int):
+def uniObjective_example(n_trials: int):
     # Scenario object specifying the optimization environment
     scenario = Scenario(
         configspace,
@@ -170,49 +192,68 @@ def config_to_params(config: Configuration, model_class: type[GraphModel])->list
 # TODO: get rid of avg mode
 def extract_res_from_incumbent(incumbent, model_class: type[GraphModel], mode='random')->FittedParameters:
     final_res = []
-    if mode == 'first':
-        final_res = [config_to_params(incumbent[0], model_class)]
-    if mode == 'random':
-        chosen_incumbent = random.choice(incumbent)
-        final_res = [config_to_params(chosen_incumbent, model_class)]
-    if mode == 'all':
-        for config in incumbent:
-            config_params = config_to_params(config, model_class)
-            final_res.append(config_params)
-    if mode == 'avg':
-        avg_incumbent = {}
-        for config in incumbent:
-            avg_incumbent = extract_params_from_config(config, model_class, avg_incumbent)
+    if type(incumbent) == list:
+        if mode == 'first':
+            final_res = [config_to_params(incumbent[0], model_class)]
+        if mode == 'random':
+            chosen_incumbent = random.choice(incumbent)
+            final_res = [config_to_params(chosen_incumbent, model_class)]
+        if mode == 'all':
+            for config in incumbent:
+                config_params = config_to_params(config, model_class)
+                final_res.append(config_params)
+        if mode == 'avg':
+            avg_incumbent = {}
+            for config in incumbent:
+                avg_incumbent = extract_params_from_config(config, model_class, avg_incumbent)
 
-        for param in model_class.input_parameters():
-            avg_incumbent[param.name()] /= len(incumbent)
+            for param in model_class.input_parameters():
+                avg_incumbent[param.name()] /= len(incumbent)
 
-        final_res = [[param(avg_incumbent[param.name()]) for param in model_class.input_parameters()]]
+            final_res = [[param(avg_incumbent[param.name()]) for param in model_class.input_parameters()]]
+    else:
+        # This is usually for uni objective
+        final_res = [config_to_params(incumbent, model_class)]
 
     return final_res
     
+# TODO: change function name (it now also handles uni obj)
 def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], output_directory:str, num_of_samples: int=10)->tuple[FittedParameters, int]:
     """
     Runs the smac multi-objective optimization
     Notice output_directory should be unique for each input file
     Returns a list of all the resulting incumbents
     """
-    target_function = target_function_generator(target_parameters, num_of_samples=num_of_samples, model_class=model_class)
+    is_multi_obj = False
+    # params_weights is only required for uni objective
+    params_weights = generate_weights(target_parameters, model_class)
+    target_function = target_function_generator(target_parameters, num_of_samples=num_of_samples, model_class=model_class, params_weights=params_weights, is_multi_obj=is_multi_obj)
     configspace = generate_config_space(target_parameters, model_class)
     objectives = [param.name() for param in model_class.input_parameters()]
-    scenario = Scenario(
-        configspace,
-        deterministic=True,
-        n_trials=n_trials,
-        objectives=objectives,
-        output_directory=output_directory
-        )
-    callback = TerminationCallback()
-    callback.build_threshold(model_class.input_parameters())
-    smac = BlackBoxFacade(scenario, target_function=target_function, callbacks=[callback])
+    if is_multi_obj:
+        scenario = Scenario(
+            configspace,
+            deterministic=True,
+            n_trials=n_trials,
+            objectives=objectives,
+            output_directory=output_directory
+            )
+        callback = TerminationCallback()
+        callback.build_threshold(model_class.input_parameters())
+        smac = BlackBoxFacade(scenario, target_function=target_function, callbacks=[callback])
+    else:
+        # No objectives parameter
+        scenario = Scenario(
+            configspace,
+            deterministic=True,
+            n_trials=n_trials,
+            output_directory=output_directory
+            )
+        # TODO: should set termination criteria of its own
+        smac = BlackBoxFacade(scenario, target_function=target_function)
     incumbent = smac.optimize()
-    # print('*** Incumbent***')
-    # print(incumbent)
+    print('*** Incumbent***')
+    print(incumbent)
     
     # TODO: we can get more info on the run using smac
     #

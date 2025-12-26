@@ -1,0 +1,48 @@
+Here I'll keep an ongoing explanation of status and files.
+
+- smac directory
+	I think these are all attempts and debugging stuff
+	erdosRenyi - specifically for erdos renyi
+	generalSmacMini - I've copied the general smac to this directory, just in order to be able to run it
+	(beware - now I've got quite a lot of copies of the code)
+- src directory
+	generalSmac
+		This is suppose to work on all models
+		Its actually the local run
+			I guess no experiments file yet...
+		It has the multiObjective function
+			Which should later become a fitter object.
+		But - I can't manage to run it
+
+How to run the smac?
+	Since what I have is the fitter - it should be the X experiment.
+	Meaning - should first run sample_and_measure experiment
+What to do with the results to get figures?
+
+
+Running smac instructions:
+First, run sample_and_measure experiment
+For fitter experiment:
+conda activate SMAC
+cd smac && python3 erdosRenyiWithSmac.py
+OR: cd smac && python3 ./generalSmac.py
+
+conda activate pf2
+cd ../
+python3 experiments-inbal.py fitted_sample_and_measure_erdos-renyi
+python3 ./experiments-inbal.py merge_csv
+python3 analysis/figures_difference.py --fitter smac --model <model-name>
+
+Running attempts:
+1. firstIncumbent - running the erdosRenyiWithSmac,when always taking the first incumbent (25/11/25). Results - d was all over the place.
+
+2. some Improvements:
+generation of config space based on target params
+num of samples: 2 -> 10
+
+3. running general smac mini (copy of general smac)
+
+
+More things to check on the erdos renyi file:
+	n_trials (10 -> 100), perhaps termination condition
+	Incumbent handling - taking average, perhaps other solutions....
