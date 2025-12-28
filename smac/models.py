@@ -64,28 +64,84 @@ class ErdosRenyi(GraphModel):
     def name():
         return 'Erdos-Renyi'
 
-# Erdos renyi that provides also m (for MLE)
-class ErdosRenyiExtended(GraphModel):
+
+class ChungLuPowerlaw(GraphModel):
     @staticmethod
     def input_parameters():
-        return NumberOfVertices, AverageDegree, NumberOfEdges
+        return NumberOfVertices, AverageDegree, PowerlawBeta
 
     def _generate(self):
-        print('all parameters are: ', self.parameters)
-        n, d = map(lambda param: param.value, self.parameters)
-        n = int(n)
-        if n < 2:
-            p = 0
-        else:
-            p = d / (n - 1)
+        n, d, beta = map(lambda param: param.value, self.parameters)
+        d = min(d, n - 1)
+
+        if d == 0 or n == 1:
+            return networkit.Graph(1)
+
+        degree_sequence = powerlaw_generate(n, d, beta)
         if self.seed is not None:
             networkit.setSeed(seed=self.seed, useThreadId=False)
-        return networkit.generators.ErdosRenyiGenerator(n, p).generate()
+        return networkit.generators.ChungLuGenerator(degree_sequence).generate()
 
     @staticmethod
     def name():
-        return 'Erdos-Renyi-Extended'
+        return 'Chung-Lu-PL'
 
 
+class GIRG(GraphModel):
+    dimension = NotImplementedError
 
-ALL_MODELS = [ErdosRenyi, ErdosRenyiExtended]
+    def __init_subclass__(cls, /, dimension, **kwargs) -> None:
+        super().__init_subclass__(**kwargs)
+        cls.dimension = dimension
+
+    @staticmethod
+    def input_parameters():
+        return NumberOfVertices, AverageDegree, PowerlawBeta, Temperature
+
+    def _generate(self):
+        if self.seed is not None:
+            random.seed(self.seed)
+        wseed = random.randrange(10000)
+        pseed = random.randrange(10000)
+        sseed = random.randrange(10000)
+
+        n, deg, beta, t = map(lambda param: param.value, self.parameters)
+        n = int(n)
+        deg = min(deg, n - 1)
+        alpha = 1 / t
+
+        # Handle special case of empty graph
+        if deg == 0.0:
+            return networkit.Graph(1)
+
+        weights = girgs.generate_weights(n, beta, wseed, False)
+        positions = girgs.generate_positions(n, self.dimension, pseed, False)
+        scaling = girgs.scale_weights(weights, deg, self.dimension, alpha)
+        weights = [scaling * weight for weight in weights]
+        edges = girgs.generate_edges(weights, positions, alpha, sseed)
+
+        g = networkit.Graph(n)
+
+        for u, v in edges:
+            g.addEdge(u, v)
+
+        return g
+
+    @classmethod
+    def name(cls):
+        return f'GIRG-{cls.dimension}d'
+
+
+class GIRG1D(GIRG, dimension=1):
+    pass
+
+
+class GIRG2D(GIRG, dimension=2):
+    pass
+
+
+class GIRG3D(GIRG, dimension=3):
+    pass
+
+
+ALL_MODELS = [ErdosRenyi, ChungLuPowerlaw, GIRG1D]
