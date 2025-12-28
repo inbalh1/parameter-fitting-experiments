@@ -12,6 +12,7 @@ import math
 import numpy as np
 from typing import Literal, TypeAlias
 import random
+import argparse
 # facade - there are several options, and they say its important
 
 
@@ -369,13 +370,18 @@ def local_run(model_name: str, mode: Literal['all', 'compact']='all'):
         
         fitted_parameters, used_budget = fitter
         writeResultsWrapper(fitted_parameters, output_file, model_class, target_features=target_features, fitter_name="smac", used_budget=used_budget)
+    
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    # parser.add_argument('input_file', type=str)
+    model_choices = {model.name().lower(): model for model in ALL_MODELS}
+    parser.add_argument('--model', type=str.lower,
+                        choices=model_choices.keys(), required=True)
 
-if __name__ == '__main__':
-    local_run(model_name='erdos-renyi', mode='all')
+    args, unknown = parser.parse_known_args()
+    # model_class = model_choices[args.model]
+    local_run(model_name=args.model, mode='all')
     # local_run(model_name='chung-lu-pl', mode='compact')
 
 # Questions:
-# Target function
-    # Perhaps should use abs instead of quadratic
-# Facade - make should to choose the right one...
 # Parameters for beta, temperature - config space? cost threshold?
