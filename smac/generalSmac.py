@@ -56,7 +56,6 @@ def target_function_generator(target_params: list[Parameter], num_of_samples: in
             accumulated_params = append_params(accumulated_params, cur_output_params)
 
         avg_output_params = [param.__class__(param.value / num_of_samples) for param in accumulated_params]
-        # print(' avg output: ', avg_output_params)
 
         # Get cost for each output parameter (= feature)
         params_costs = {out_param.name(): compare_param(out_param, target_param) for out_param, target_param in zip(
@@ -67,9 +66,9 @@ def target_function_generator(target_params: list[Parameter], num_of_samples: in
             final_res = list(params_costs.values())
         else:
             # Return a weighted sum of the costs
-            final_res = sum(cost * params_weights[param] for param, cost in params_costs.items())
-        # print("*** Final res: ")
-        # print(final_res)
+            final_res = sum(cost * (params_weights[param]) ** 2 for param, cost in params_costs.items())
+        #print("*** Final res: ")
+        #print(final_res)
         return final_res
     return target_function
 
@@ -97,15 +96,16 @@ def generate_weights(target_parameters: list[Parameter], model_class: type[Graph
             model_class.input_parameters(), target_parameters):
         if in_param.name() == 'n':
             n = float(target_param.value)
-            max_value = int(math.floor(n + math.sqrt(n))) + 1
+            # TODO: here is exactly where the weights should be connected to the config space...
+            max_value = int(math.floor(n + 10 * math.sqrt(n))) + 1
             min_value = math.floor(n)
-            weights['n'] = 1 / (max_value - min_value)
+            weights[in_param.output_parameter().name()] = 1 / (max_value - min_value)
         elif in_param.name() == 'd':
             #'config['d'] = (1, 15)
-            weights['d'] = 1 / 14
+            weights[in_param.output_parameter().name()] = 1 / 14
         elif in_param.name() == 'beta':
             # config['beta'] = (2, 3)
-            weights['beta'] = 1
+            weights[in_param.output_parameter().name()] = 1
         else:
             raise NotImplementedError()            
     print('Weights are: ', weights)
@@ -126,7 +126,7 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
             model_class.input_parameters(), target_parameters):
         if in_param.name() == 'n':
             n = float(target_param.value)
-            max_value = int(math.floor(n + math.sqrt(n))) + 1
+            max_value = int(math.floor(n + 10 * math.sqrt(n))) + 1
             min_value = math.floor(n)
             config['n'] = (min_value , max_value)
             configspace.add(
