@@ -2,10 +2,10 @@ from abc import ABC, abstractmethod
 import random
 
 import networkit
+from pygirgs import hypergirgs, girgs
 
-
-from helpers import shrink_to_giant_component
-from parameters import NumberOfVertices, NumberOfEdges, AverageDegree, Temperature
+from helpers import shrink_to_giant_component, powerlaw_generate
+from parameters import NumberOfVertices, NumberOfEdges, AverageDegree, PowerlawBeta, Temperature
 
 
 class GraphModel(ABC):

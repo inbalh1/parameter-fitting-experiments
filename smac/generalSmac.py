@@ -69,6 +69,9 @@ def target_function_generator(target_params: list[Parameter], num_of_samples: in
             final_res = sum(cost * (params_weights[param]) ** 2 for param, cost in params_costs.items())
         #print("*** Final res: ")
         #print(final_res)
+        # TODO: from some reason girg doesn't work without this assertion
+        assert final_res is not None, "Returned None"
+        assert np.isfinite(final_res), f"Non-finite value: {value}"
         return final_res
     return target_function
 
@@ -106,6 +109,9 @@ def generate_weights(target_parameters: list[Parameter], model_class: type[Graph
         elif in_param.name() == 'beta':
             # config['beta'] = (2, 3)
             weights[in_param.output_parameter().name()] = 1
+        elif in_param.name() == 't':
+            # config['t'] = (0, 0.9999)
+            weights[in_param.output_parameter().name()] = 1
         else:
             raise NotImplementedError()            
     print('Weights are: ', weights)
@@ -140,6 +146,9 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
         elif in_param.name() == 'beta':
             config['beta'] = (2, 3)
             configspace.add(UniformFloatHyperparameter("beta", lower=2, upper=3))
+        elif in_param.name() == 't':
+            config['t'] = (0, 0.9999)
+            configspace.add(UniformFloatHyperparameter("t", lower=0, upper=0.9999))
         else:
             raise NotImplementedError()            
 
