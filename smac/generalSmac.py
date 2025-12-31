@@ -228,13 +228,12 @@ def extract_res_from_incumbent(incumbent, model_class: type[GraphModel], mode='r
     return final_res
     
 # TODO: change function name (it now also handles uni obj)
-def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], output_directory:str, num_of_samples: int=10)->tuple[FittedParameters, int]:
+def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], output_directory:str, num_of_samples: int=10, is_multi_obj: bool=False)->tuple[FittedParameters, int]:
     """
     Runs the smac multi-objective optimization
     Notice output_directory should be unique for each input file
     Returns a list of all the resulting incumbents
     """
-    is_multi_obj = False
     # params_weights is only required for uni objective
     params_weights = generate_weights(target_parameters, model_class)
     target_function = target_function_generator(target_parameters, num_of_samples=num_of_samples, model_class=model_class, params_weights=params_weights, is_multi_obj=is_multi_obj)
@@ -333,7 +332,8 @@ def writeResults(fitted_parameters: list[Parameter], output_file:str, model_clas
 
 # TODO: consider writing a general local run (to run experiments, just without the run package,
 # which is parallel and without prints...)
-def local_run(model_name: str, mode: Literal['all', 'compact']='all'):
+# todo: since I run locally, should make sure it doesnt run again existing files
+def local_run(model_name: str, is_multi_obj:bool, mode: Literal['all', 'compact']='all'):
     import glob
     from collections import namedtuple
 
@@ -350,6 +350,9 @@ def local_run(model_name: str, mode: Literal['all', 'compact']='all'):
     for i in input_files:
         input_file = os.path.join(base_input, f'{i}.csv')
         output_file = os.path.join(base_output, f'{i}.csv')
+        
+        if (os.path.exists(output_file)):
+            continue
         
         print("Working", input_file)
 
@@ -375,7 +378,9 @@ def local_run(model_name: str, mode: Literal['all', 'compact']='all'):
             target_parameters=parameters,
             model_class=model_class,
             num_of_samples=num_of_samples,
-            output_directory=output_directory)
+            output_directory=output_directory,
+            is_multi_obj=is_multi_obj
+            )
         
         fitted_parameters, used_budget = fitter
         writeResultsWrapper(fitted_parameters, output_file, model_class, target_features=target_features, fitter_name="smac", used_budget=used_budget)
@@ -386,10 +391,10 @@ if __name__ == "__main__":
     model_choices = {model.name().lower(): model for model in ALL_MODELS}
     parser.add_argument('--model', type=str.lower,
                         choices=model_choices.keys(), required=True)
-
+    parser.add_argument('--multi-obj', help='True for multi-variate optimization, false otherwise (default)', action='store_true', default=False)
     args, unknown = parser.parse_known_args()
     # model_class = model_choices[args.model]
-    local_run(model_name=args.model, mode='all')
+    local_run(model_name=args.model, is_multi_obj=args.multi_obj, mode='all')
     # local_run(model_name='chung-lu-pl', mode='compact')
 
 # Questions:
