@@ -67,11 +67,11 @@ def target_function_generator(target_params: list[Parameter], num_of_samples: in
         else:
             # Return a weighted sum of the costs
             final_res = sum(cost * (params_weights[param]) ** 2 for param, cost in params_costs.items())
-        #print("*** Final res: ")
-        #print(final_res)
-        # TODO: from some reason girg doesn't work without this assertion
-        assert final_res is not None, "Returned None"
-        assert np.isfinite(final_res), f"Non-finite value: {value}"
+            # TODO: from some reason girg doesn't work without this assertion
+            assert final_res is not None, "Returned None"
+            assert np.isfinite(final_res), f"Non-finite value: {value}"
+        # print("*** Final res: ")
+        # print(final_res)
         return final_res
     return target_function
 
@@ -144,7 +144,7 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
             configspace.add(
                 UniformFloatHyperparameter("d", lower=1, upper=15))
         elif in_param.name() == 'beta':
-            config['beta'] = (2, 3)
+            config['beta'] = (1.5, 30)
             configspace.add(UniformFloatHyperparameter("beta", lower=2, upper=3))
         elif in_param.name() == 't':
             config['t'] = (0, 0.9999)
