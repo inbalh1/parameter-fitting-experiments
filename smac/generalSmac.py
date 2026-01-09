@@ -5,12 +5,13 @@ from smac.main.smbo import SMBO
 from smac.runhistory import TrialInfo, TrialValue
 from models import ErdosRenyi, GraphModel, ALL_MODELS
 from parameters import Parameter
+from smacParametersSpec import PARAMS_SPEC
 import sys
 import os
 import csv
 import math
 import numpy as np
-from typing import Literal, TypeAlias
+from typing import Literal, TypeAlias, Dict
 import random
 import argparse
 # facade - there are several options, and they say its important
@@ -44,7 +45,8 @@ def target_function_generator(target_params: list[Parameter], num_of_samples: in
         # returns the cost for each objective (parameter)
         input_params = []
         for input_param in model_class.input_parameters():
-            value = config[input_param.name()]
+            non_transformed_value = config[input_param.name()]
+            value = PARAMS_SPEC[input_param.name()].transform(non_transformed_value)
             input_params.append(input_param(value))
 
         model = model_class(*input_params)
@@ -89,31 +91,17 @@ def extract_params_from_config(config: Configuration, model_class: type[GraphMod
             cur_res[param_name] = config[param_name]
     return cur_res
 
-def generate_weights(target_parameters: list[Parameter], model_class: type[GraphModel]) -> dict:
+def generate_weights(target_parameters: list[Parameter], model_class: type[GraphModel]) -> Dict[str, float]:
     # Calculate the weight for each parameter in the cost function
-    # TODO: this function basically does the same thing as the next one (to generate configuration space)
-    # TODO2: perhaps this should get configuration space and go over it...
+    # The weight is according to the the range of the output feature
     weights = {}
 
     for in_param, target_param in zip(
             model_class.input_parameters(), target_parameters):
-        if in_param.name() == 'n':
-            n = float(target_param.value)
-            # TODO: here is exactly where the weights should be connected to the config space...
-            max_value = int(math.floor(n + 10 * math.sqrt(n))) + 1
-            min_value = math.floor(n)
-            weights[in_param.output_parameter().name()] = 1 / (max_value - min_value)
-        elif in_param.name() == 'd':
-            #'config['d'] = (1, 15)
-            weights[in_param.output_parameter().name()] = 1 / 14
-        elif in_param.name() == 'beta':
-            # config['beta'] = (2, 3)
-            weights[in_param.output_parameter().name()] = 1
-        elif in_param.name() == 't':
-            # config['t'] = (0, 0.9999)
-            weights[in_param.output_parameter().name()] = 1
-        else:
-            raise NotImplementedError()            
+        value = float(target_param.value)
+        weight = PARAMS_SPEC[in_param.name()].generate_weight(value)
+        weights[in_param.output_parameter().name()] = weight
+  
     print('Weights are: ', weights)
     return weights
 
@@ -132,23 +120,16 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
             model_class.input_parameters(), target_parameters):
         if in_param.name() == 'n':
             n = float(target_param.value)
-            max_value = int(math.floor(n + 10 * math.sqrt(n))) + 1
-            min_value = math.floor(n)
-            config['n'] = (min_value , max_value)
-            configspace.add(
-                UniformIntegerHyperparameter(
-                "n", lower=min_value, upper=max_value)  
-            )
+            configspace.add(PARAMS_SPEC['n'].generate_config(n))
         elif in_param.name() == 'd':
-            config['d'] = (1, 15)
-            configspace.add(
-                UniformFloatHyperparameter("d", lower=1, upper=15))
+            value = float(target_param.value)
+            configspace.add(PARAMS_SPEC['d'].generate_config(value))
         elif in_param.name() == 'beta':
-            config['beta'] = (1.5, 30)
-            configspace.add(UniformFloatHyperparameter("beta", lower=2, upper=3))
+            value = float(target_param.value)
+            configspace.add(PARAMS_SPEC['beta'].generate_config(value))
         elif in_param.name() == 't':
-            config['t'] = (0, 0.9999)
-            configspace.add(UniformFloatHyperparameter("t", lower=0, upper=0.9999))
+            value = float(target_param.value)
+            configspace.add(PARAMS_SPEC['t'].generate_config(value))
         else:
             raise NotImplementedError()            
 
