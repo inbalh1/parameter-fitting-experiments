@@ -9,7 +9,19 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from scipy.stats import pearsonr
 import argparse
+import sys
 
+sys.path.insert(0, 'src')
+from models import ALL_MODELS
+
+param_name_to_title = {
+    'n': 'vertex count',
+    'd': 'average degree',
+    'beta': 'beta',
+    't': 'temperature',
+    'heterogeneity': 'heterogeneity',
+    'cc': 'clustering coefficient'
+}
 
 # TODO: perhaps should also give output dir
 class Analyzer:
@@ -39,23 +51,20 @@ class Analyzer:
     def execute(self):
         tbl = self.create_table()
         print(tbl.describe())
-
+        
         results = []
-        # --- Vertex Count (n) ---
-        results.append(self.analyze_feature(tbl, 'n'))
-        fig_n = self.plot_feature(tbl, feature='n', feature_title='vertex count')
-        self.save_figure(fig_n, feature='n')
-        fig_n_param = self.plot_param(tbl, param='n', param_title='vertex count')
-        # TODO: change name of parameter from feature to param
-        self.save_figure(fig_n_param, feature='n_param')
-
-        # --- Analysis: Average Degree (d) ---
-        results.append(self.analyze_feature(tbl, 'd'))
-        fig_d = self.plot_feature(tbl, feature='d', feature_title='average degree')
-        self.save_figure(fig_d, feature='d')
-        fig_d_param = self.plot_param(tbl, param='d', param_title='average degree')
-        # TODO: change name of parameter from feature to param
-        self.save_figure(fig_d_param, feature='d_param')
+        model_choices = {model.name().lower(): model for model in ALL_MODELS}
+        model_class = model_choices[self.model]
+        for param in model_class.input_parameters():
+            feature_name = param.output_parameter().name()
+            feature_title = param_name_to_title[feature_name]
+            results.append(self.analyze_feature(tbl, feature_name))
+            fig = self.plot_feature(tbl, feature=feature_name, feature_title=feature_title)
+            self.save_figure(fig, feature=feature_name)
+            param_title = param_name_to_title[param.name()]
+            fig_param = self.plot_param(tbl, param=param.name(), param_title=param_title)
+            # TODO: change name of parameter from feature to param
+            self.save_figure(fig_param, feature=f'{param.name()}_param')
 
         # Mean iterations
         #print("Mean iterations:", tbl["total_iterations"].mean())
