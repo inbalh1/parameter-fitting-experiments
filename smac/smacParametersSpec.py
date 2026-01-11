@@ -102,8 +102,8 @@ class Temperature:
     @staticmethod
     def generate_config(value: float) -> UniformFloatHyperparameter:
         # This will go through exponential transformation
-        # The values after transformation: config['t'] = (0, 0.999)
-        return UniformFloatHyperparameter("t", lower=0, upper=6.9)
+        # The values after transformation: config['t'] = (0, 0.9999)
+        return UniformFloatHyperparameter("t", lower=0, upper=9.22)
 
     @staticmethod
     def generate_weight(value: float) -> float:
