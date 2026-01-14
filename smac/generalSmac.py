@@ -177,7 +177,13 @@ def config_to_params(config: Configuration, model_class: type[GraphModel])->list
     """
     Takes a configuration, returns as a list of parameters according to the model's input parameters
     """
-    return [param(config[param.name()]) for param in model_class.input_parameters()]
+    res = []
+    for param in model_class.input_parameters():
+        non_transformed_value = config[param.name()]
+        value = PARAMS_SPEC[param.name()].transform(non_transformed_value)
+        res.append(param(value))
+    print('*** Result after transformation: ', res)
+    return res
     
     
 # TODO: get rid of avg mode
@@ -194,6 +200,7 @@ def extract_res_from_incumbent(incumbent, model_class: type[GraphModel], mode='r
                 config_params = config_to_params(config, model_class)
                 final_res.append(config_params)
         if mode == 'avg':
+            # TODO: should also transform here
             avg_incumbent = {}
             for config in incumbent:
                 avg_incumbent = extract_params_from_config(config, model_class, avg_incumbent)
