@@ -95,11 +95,16 @@ def generate_weights(target_parameters: list[Parameter], model_class: type[Graph
     # Calculate the weight for each parameter in the cost function
     # The weight is according to the the range of the output feature
     weights = {}
+    
+    features_dict = {}
+    for in_param, target_param in zip(
+        model_class.input_parameters(), target_parameters):
+        features_dict[in_param.output_parameter().name()] = target_param.value
 
     for in_param, target_param in zip(
             model_class.input_parameters(), target_parameters):
         value = float(target_param.value)
-        weight = PARAMS_SPEC[in_param.name()].generate_weight(value)
+        weight = PARAMS_SPEC[in_param.name()].generate_weight(value, model_class, features_dict)
         weights[in_param.output_parameter().name()] = weight
   
     print('Weights are: ', weights)
@@ -115,23 +120,27 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
     # })
     config = {}
     configspace = ConfigurationSpace()
-
+    
+    features_dict = {}
     for in_param, target_param in zip(
-            model_class.input_parameters(), target_parameters):
-        if in_param.name() == 'n':
-            n = float(target_param.value)
-            configspace.add(PARAMS_SPEC['n'].generate_config(n))
-        elif in_param.name() == 'd':
-            value = float(target_param.value)
-            configspace.add(PARAMS_SPEC['d'].generate_config(value))
-        elif in_param.name() == 'beta':
-            value = float(target_param.value)
-            configspace.add(PARAMS_SPEC['beta'].generate_config(value))
-        elif in_param.name() == 't':
-            value = float(target_param.value)
-            configspace.add(PARAMS_SPEC['t'].generate_config(value))
+        model_class.input_parameters(), target_parameters):
+        features_dict[in_param.output_parameter().name()] = float(target_param.value)
+
+    for out_param_name, target_param_value in features_dict.items():
+        if out_param_name == 'n':
+            n = target_param_value
+            configspace.add(PARAMS_SPEC['n'].generate_config(n, model_class, features_dict))
+        elif out_param_name == 'd':
+            value = target_param_value
+            configspace.add(PARAMS_SPEC['d'].generate_config(value, model_class, features_dict))
+        elif out_param_name == 'heterogeneity':
+            value = target_param_value
+            configspace.add(PARAMS_SPEC['beta'].generate_config(value, model_class, features_dict))
+        elif out_param_name == 'cc':
+            value = target_param_value
+            configspace.add(PARAMS_SPEC['t'].generate_config(value, model_class, features_dict))
         else:
-            raise NotImplementedError()            
+            raise NotImplementedError(out_param_name)  
 
     # TODO: should add temprature here
     # TODO: consider create a parameers extended class with this info ( + thresholds )
