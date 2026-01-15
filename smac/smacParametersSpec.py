@@ -97,7 +97,7 @@ class PowerlawBeta:
     def generate_config(value: float, model: GraphModel, features_dict: Dict[str, float]) -> UniformFloatHyperparameter:
         # This will go through transformation in the objective function
         # config['beta'] = (2, 28)
-        return FloatHyperparameter(
+        return UniformFloatHyperparameter(
                 name="beta",
                 lower=2.0,
                 upper=28.0,
