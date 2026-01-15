@@ -122,8 +122,9 @@ class Temperature:
     @staticmethod
     def generate_config(value: float, model: GraphModel, features_dict: Dict[str, float]) -> UniformFloatHyperparameter:
         # This will go through exponential transformation
-        # The values after transformation: config['t'] = (0, 0.9999)
-        return UniformFloatHyperparameter("t", lower=0, upper=9.22)
+        # The values after transformation: config['t'] = (0, 0.99)
+        # uppper_bound is approximately ln(1/(1-0.99))
+        return UniformFloatHyperparameter("t", lower=0, upper=5)
 
     @staticmethod
     def generate_weight(value: float, model: GraphModel, features_dict: Dict[str, float]) -> float:

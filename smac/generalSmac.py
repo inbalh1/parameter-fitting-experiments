@@ -339,8 +339,7 @@ def local_run(model_name: str, is_multi_obj:bool, mode: Literal['all', 'compact'
 
     model_choices = {model.name().lower(): model for model in ALL_MODELS}
     model_class = model_choices[model_name]
-    input_files = [os.path.splitext(os.path.basename(f))[0] for f in glob.glob(f"../output_data/target_params/{model_name}/*")]
-    input_files = [f for f in input_files if "_d=3_" not in f]
+    input_files = [os.path.splitext(os.path.basename(f))[0] for f in glob.glob(f"../output_data/target_params/{model_name}/*.csv")]
     
     if mode == "compact":
         input_files = input_files[:1]
