@@ -69,12 +69,15 @@ def target_function_generator(target_params: list[Parameter], num_of_samples: in
         else:
             # Return a weighted sum of the costs
             final_res = sum(cost * (params_weights[param]) ** 2 for param, cost in params_costs.items())
-            # TODO: from some reason girg doesn't work without this assertion
+            # TODO: from some reason girg doesn't work without this assertion (perhaps it was because I've started running before)
             assert final_res is not None, "Returned None"
             assert np.isfinite(final_res), f"Non-finite value: {value}"
         # print("*** Final res: ")
         # print(final_res)
-        return final_res
+        debugging_info = { 
+            'measured_' + param.name(): param.value for param in avg_output_params
+        }
+        return (final_res, debugging_info)
     return target_function
 
 
