@@ -96,8 +96,15 @@ class PowerlawBeta:
     @staticmethod
     def generate_config(value: float, model: GraphModel, features_dict: Dict[str, float]) -> UniformFloatHyperparameter:
         # This will go through transformation in the objective function
-        # config['beta'] = (1.5, 15)
-        return UniformFloatHyperparameter("beta", lower=1.5, upper=15)
+        # config['beta'] = (2, 28)
+        return FloatHyperparameter(
+                name="beta",
+                lower=2.0,
+                upper=28.0,
+                log=True,
+                default_value=2.5
+                )
+        # return UniformFloatHyperparameter("beta", lower=1.5, upper=15)
 
     @staticmethod
     def generate_weight(value: float, model: GraphModel, features_dict: Dict[str, float]) -> float:
@@ -105,14 +112,6 @@ class PowerlawBeta:
 
     @staticmethod
     def transform(value: float) -> float:
-        assert 1.5 <= value <= 15
-        
-        # map [2,10] -> [2,3]
-        if 2 <= value <= 10:
-            # Linear mapping [x0, x1] => [a, b]
-            #   formula: new = a + (x - x0) * (b - a) / (x1 - x0)
-            return 2 + (value - 2) / 8
-    
         return value
 
 
