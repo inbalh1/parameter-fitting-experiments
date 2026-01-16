@@ -346,13 +346,21 @@ def local_run(model_name: str, is_multi_obj:bool, mode: Literal['all', 'compact'
     base_input = f'../output_data/target_params/{model_name}'
     base_output = f"../output_data/fitted_params/smac/{model_name}"
     
+    # Run only on experiments that do not have output yet
+    existing_outputs = {
+        os.path.splitext(os.path.basename(f))[0]
+        for f in glob.glob(os.path.join(base_output, "*.csv"))
+    }
+    pending_inputs = [i for i in input_files if i not in existing_outputs]
+    
+    # Randomly take half of the sampels (since it takes a long time to run)
+    random.shuffle(pending_inputs)
+    pending_inputs = pending_inputs[:len(pending_inputs)//2]
 
-    for i in input_files:
+
+    for i in pending_inputs:
         input_file = os.path.join(base_input, f'{i}.csv')
         output_file = os.path.join(base_output, f'{i}.csv')
-        
-        if (os.path.exists(output_file)):
-            continue
         
         print("Working", input_file)
 
