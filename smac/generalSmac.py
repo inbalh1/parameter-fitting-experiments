@@ -14,6 +14,8 @@ import numpy as np
 from typing import Literal, TypeAlias, Dict
 import random
 import argparse
+from pathlib import Path
+import time
 # facade - there are several options, and they say its important
 
 
@@ -330,9 +332,33 @@ def writeResults(fitted_parameters: list[Parameter], output_file:str, model_clas
         dict_writer.writerow(row_data)
 
 
+# Helper functions to coordinate between workers
+def touch(path):
+    with open(path, 'a'):
+        os.utime(path, None)
+def is_file_of_size_zero(path):
+    p = Path(path)
+    return p.is_file() and p.stat().st_size == 0
+def is_complete(output_path):
+    p = Path(output_path)
+    if p.exists() and not is_file_of_size_zero(output_path):
+      return True
+    return False
+    
+def should_process(output_path):
+    p = Path(output_path)
+    if not p.exists():
+      return True #nobody yet started processing time file, I'm the first one
+    if is_complete(output_path):
+      return False #completed - skip
+    
+    mtime = p.stat().st_mtime
+    if (time.time() - mtime) < 20 * 60:
+      return False #in progress by another worker - continue the the next one
+    return True  #the worker failed, restart instead of the worker
+
 # TODO: consider writing a general local run (to run experiments, just without the run package,
 # which is parallel and without prints...)
-# todo: since I run locally, should make sure it doesnt run again existing files
 def local_run(model_name: str, is_multi_obj:bool, mode: Literal['all', 'compact']='all'):
     import glob
     from collections import namedtuple
@@ -343,25 +369,19 @@ def local_run(model_name: str, is_multi_obj:bool, mode: Literal['all', 'compact'
     
     if mode == "compact":
         input_files = input_files[:1]
+        
     base_input = f'../output_data/target_params/{model_name}'
     base_output = f"../output_data/fitted_params/smac/{model_name}"
-    
-    # Run only on experiments that do not have output yet
-    existing_outputs = {
-        os.path.splitext(os.path.basename(f))[0]
-        for f in glob.glob(os.path.join(base_output, "*.csv"))
-    }
-    pending_inputs = [i for i in input_files if i not in existing_outputs]
-    
-    # Randomly take half of the sampels (since it takes a long time to run)
-    random.shuffle(pending_inputs)
-    pending_inputs = pending_inputs[:len(pending_inputs)//2]
+    random.shuffle(input_files)
 
 
-    for i in pending_inputs:
+    for i in input_files:
         input_file = os.path.join(base_input, f'{i}.csv')
         output_file = os.path.join(base_output, f'{i}.csv')
         
+        if not should_process(output_file):
+            continue
+        touch(output_file)
         print("Working", input_file)
 
         custom_fitter_config = {}
