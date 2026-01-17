@@ -6,11 +6,7 @@ import multiprocessing
 
 from parameter_fitters import ParameterFitter, RobbinsMonroFinal
 from models import GraphModel, ALL_MODELS
-
-from parameter_fitters import ParameterFitter, RobbinsMonroFinal
-import multiprocessing
-from models import *
-from parameters import *
+from parameters import Parameter
 
 
 class ParameterFitterRunner:

@@ -81,6 +81,27 @@ To run the maximum-likelihood estimation (MLE) procedure, follow these steps:
 3. **Update the base directory if needed**
    If you're running the Colab notebook **in the cloud** or **from a different folder structure**, make sure to update the `base_dir` variable at the beginning of the notebook. It should point to the location of the MLE data generated in step 1, inside `output_data/target_params/mle`.
 
+## Running SMAC optimization
+We use the **SMAC3** package for parameter optimization.  
+For more information about SMAC3, see: https://automl.github.io/SMAC3/latest/
+
+### Smac installations
+- Create a dedicated conda environment using the `environment.yml` file inside the `smac` folder:
+
+```bash
+conda env create -f smac/environment.yml
+```
+> *Note: This environment should be separate from the main environment used for other experiments.*
+- Install `pygirgs` package as before.
+
+### Preparing data, Running and Preprocessing
+- Generate the data (as before).
+- Execute `cd smac && python3 ./smacFitter.py --model <model_name>`
+	Notice this is only the fitter.
+- After fitting, run the `fitted_sample_and_measure` experiment like before.
+- Analysis: Execute 
+`python3 analysis/figures_difference.py --fitter smac --model <model-name>`
+
 ## Structure of experiments output
 
 Running the experiments generates output under the `output_data/` directory, organized by experiment type and model. Here's an overview:
