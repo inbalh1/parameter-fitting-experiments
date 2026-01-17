@@ -24,7 +24,6 @@ param_name_to_title = {
 class Analyzer:
     def __init__(self, fitter, model):
         # If fitter is None - its RobinsMonro (since we dont use a special folder for it)
-        # TODO: currently it doesn't really accept model (handles only n, d)
         self.fitter = fitter
         self.model = model
         
@@ -65,7 +64,6 @@ class Analyzer:
 
         # Mean iterations
         #print("Mean iterations:", tbl["total_iterations"].mean())
-        # TODO: what to do about total_iteratinos, that keep appearing?
 
         # Write to file
         csv_path = os.path.join(self.output_dir, "analysis_result.csv")
