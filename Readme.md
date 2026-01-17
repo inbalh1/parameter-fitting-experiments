@@ -29,16 +29,6 @@ R -e 'install.packages(c("ggplot2", "reshape2", "plyr", "dplyr", "scales"), repo
 - Download the relevant networks from [Konect](http://konect.cc/networks/) and add them into the folder `input_data/konect`.
 - Optional: Download the file `output-data.zip` from [Zenodo](https://doi.org/10.5281/zenodo.10629451) and extract its contents into the folder `output_data`. This way, you can access all experiment results without running them yourself.
 
-# Smac installations
-TODO: go through this...
-- To run our experiments with smac, install smac from:
-https://automl.github.io/SMAC3/latest/1_installation/
-Note some packages might clash with the packages of the rest of the project, so its recommended to use another conda environment.
-packages to install (using conda\ pip): TODO: can create its own env file...
-- networkit
-- cmake=3.15
-Install `pygirgs` - the same way as before.
-
 # File structure
 
 - The folder `input_data` contains all networks used (KONECT) and generated (by random network models).
@@ -90,6 +80,27 @@ To run the maximum-likelihood estimation (MLE) procedure, follow these steps:
 
 3. **Update the base directory if needed**
    If you're running the Colab notebook **in the cloud** or **from a different folder structure**, make sure to update the `base_dir` variable at the beginning of the notebook. It should point to the location of the MLE data generated in step 1, inside `output_data/target_params/mle`.
+
+## Running SMAC optimization
+We use the **SMAC3** package for parameter optimization.  
+For more information about SMAC3, see: https://automl.github.io/SMAC3/latest/
+
+### Smac installations
+- Create a dedicated conda environment using the `environment.yml` file inside the `smac` folder:
+
+```bash
+conda env create -f smac/environment.yml
+```
+> *Note: This environment should be separate from the main environment used for other experiments.*
+- Install `pygirgs` package as before.
+
+### Preparing data, Running and Preprocessing
+- Generate the data (as before).
+- Execute `cd smac && python3 ./smacFitter.py --model <model_name>`
+	Notice this is only the fitter.
+- After fitting, run the `fitted_sample_and_measure` experiment like before.
+- Analysis: Execute 
+`python3 analysis/figures_difference.py --fitter smac --model <model-name>`
 
 ## Structure of experiments output
 

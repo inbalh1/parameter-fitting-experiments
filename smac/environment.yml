@@ -1,0 +1,14 @@
+name: SMAC2
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  - gcc_linux-64
+  - gxx_linux-64
+  - swig
+  - smac
+  - networkit=10.1
+  # Support for girg
+  - cmake=3.15.3
+  - powerlaw
