@@ -4,8 +4,7 @@ import glob
 import run
 import multiprocessing
 
-# Try using more than 1 core
-run.use_cores(max(1, multiprocessing.cpu_count() - 2))
+run.use_cores(multiprocessing.cpu_count() - 2)
 
 run.add(
     "sample_and_measure_[[model]]",

@@ -2,8 +2,9 @@ import argparse
 import csv
 import sys
 from pathlib import Path
-import networkit
-from parameters import NumberOfVertices, NumberOfEdges, AverageDegree, PowerlawBeta, Temperature
+
+from models import *
+
 
 class TargetParameterMeasurer:
     def __init__(self, input_file, output_file):

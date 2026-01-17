@@ -1,11 +1,6 @@
 import csv
 import argparse
 from pathlib import Path
-import networkit
-import multiprocessing
-
-from parameter_fitters import ParameterFitter, RobbinsMonroFinal
-from models import GraphModel, ALL_MODELS
 
 from parameter_fitters import ParameterFitter, RobbinsMonroFinal
 import multiprocessing
@@ -51,6 +46,7 @@ class ParameterFitterRunner:
 
     def run_fitter(self, fitter):
         logger = multiprocessing.get_logger()
+        # TODO: how to make it so I can see the logs???
         logger.info("Starting parameter fitting")
         fitted_parameters = fitter.run()
         logger.info("Finished parameter fitting")
