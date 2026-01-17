@@ -4,7 +4,8 @@ import glob
 import run
 import multiprocessing
 
-run.use_cores(multiprocessing.cpu_count() - 2)
+# Try using more than 1 core
+run.use_cores(max(1, multiprocessing.cpu_count() - 2))
 
 # To create target params - run from the other experiments files (synthetic data: experiments-models, real graphs: experiments-konect)
 

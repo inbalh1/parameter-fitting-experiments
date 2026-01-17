@@ -50,7 +50,6 @@ class NumberOfVertices:
 
     @staticmethod
     def generate_weight(value: float, model: GraphModel, features_dict: Dict[str, float]) -> float:
-        # TODO: Is this the correct way to give weight??
         if model.name() == 'Erdos-Renyi':
             max_value = NumberOfVertices.base_max_bound(value)
         else:
