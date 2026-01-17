@@ -1,4 +1,4 @@
-These are the experiments for the paper "Robust Parameter Fitting to Realistic Network Models via Iterative Stochastic Approximation".
+These are the experiments for the submission "Robust Parameter Fitting to Realistic Network Models via Iterative Stochastic Approximation".
 
 Additional data can be found at https://doi.org/10.5281/zenodo.10629451.
 
@@ -26,7 +26,7 @@ pip3 install -r requirements.txt
 R -e 'install.packages(c("ggplot2", "reshape2", "plyr", "dplyr", "scales"), repos="https://cloud.r-project.org/")'
 ```
 
-- Download the file `konect-data.zip` from [Zenodo](https://doi.org/10.5281/zenodo.10629451) and extract its contents into the folder `input_data/konect`
+- Download the relevant networks from [Konect](http://konect.cc/networks/) and add them into the folder `input_data/konect`.
 - Optional: Download the file `output-data.zip` from [Zenodo](https://doi.org/10.5281/zenodo.10629451) and extract its contents into the folder `output_data`. This way, you can access all experiment results without running them yourself.
 
 # Smac installations
@@ -74,23 +74,56 @@ Install `pygirgs` - the same way as before.
 
 Run `Rscript R/<scriptname>` to run R scripts, found in the `R`subfolder. For example, run `Rscript R/erdos-renyi-ablation-alpha.R` to generate figures and tables related to the effect of the alpha configuration of ParFit for the ER model. The resulting figures and tables can be found in `output_data/figures`.
 
+## Running the Maximum-Likelihood Estimation (MLE)
 
-## Structure of experiments output 
+To run the maximum-likelihood estimation (MLE) procedure, follow these steps:
+
+1. **Run the MLE experiments to generate the data**
+
+- Execute `python3 experiments-mle.py <experiment_name>` to generate training and test data. These experiments sample graphs and measure the resulting features. The experiments:
+  - `train_data_<model>`: generates training data
+  - `test_data_<model>`: generates test data
+    **Make sure to run all training and test experiments for all models** before proceeding to the next step. The notebook depends on this data being available.
+
+2. **Open the Colab notebook**
+   Open the provided notebook (`MLE.ipynb`) in [Google Colab](https://colab.research.google.com/) or locally in Jupyter.
+
+3. **Update the base directory if needed**
+   If you're running the Colab notebook **in the cloud** or **from a different folder structure**, make sure to update the `base_dir` variable at the beginning of the notebook. It should point to the location of the MLE data generated in step 1, inside `output_data/target_params/mle`.
+
+## Structure of experiments output
+
 Running the experiments generates output under the `output_data/` directory, organized by experiment type and model. Here's an overview:
-- **`sample_and_measure_<model>`**  
+
+- **`sample_and_measure_<model>`**
   Stores results in:
+
   - `output_data/target_params/`
   - `output_data/attributes/`
 
-- **`fit_parameters_<model>`**  
+- **`fit_parameters_<model>`**
   Stores fitted parameters in:
+
   - `output_data/fitted_params/`
 
-- **`fitted_sample_and_measure_<model>`**  
+- **`fitted_sample_and_measure_<model>`**
   Stores feature measurements in:
+
   - `output_data/fitted_features/`
 
 - **Real-world graph experiments:**
-  - **`clean_graphs`**  
+
+  - **`clean_graphs`**
     Creates cleaned versions of networks in:
     - `input_data/clean/`
+
+- **MLE experiments (`train_data_<model>`, `test_data_<model>`)**
+  Store generated data in:
+
+  - `output_data/target_params/mle/`
+
+- **MLE results (from the notebook):**
+  The analysis results produced by the `ipynb` notebook are saved in the `output/` subdirectory inside the path defined by the `base_dir` variable.
+  By default, this means:
+  - `output_data/target_params/mle/output/`
+    If you run the notebook from a different location (e.g., in the cloud or another directory), make sure `base_dir` is set accordingly.
