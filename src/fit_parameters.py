@@ -46,7 +46,6 @@ class ParameterFitterRunner:
 
     def run_fitter(self, fitter):
         logger = multiprocessing.get_logger()
-        # TODO: how to make it so I can see the logs???
         logger.info("Starting parameter fitting")
         fitted_parameters = fitter.run()
         logger.info("Finished parameter fitting")
