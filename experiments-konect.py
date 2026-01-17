@@ -4,7 +4,8 @@ import glob
 import run
 import multiprocessing
 
-run.use_cores(multiprocessing.cpu_count() - 2)
+# Try using more than 1 core
+run.use_cores(max(1, multiprocessing.cpu_count() - 2))
 
 # reduce largest connected component and convert to different format
 run.add(

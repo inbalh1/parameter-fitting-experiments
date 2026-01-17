@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
 import multiprocessing
+import numpy as np
 from models import GraphModel
 from parameters import Parameter
 from statistics import Statistics
 from typing import Optional
-
-import numpy as np
 
 
 class ParameterFitter(ABC):

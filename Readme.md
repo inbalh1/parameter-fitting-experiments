@@ -64,6 +64,7 @@ R -e 'install.packages(c("ggplot2", "reshape2", "plyr", "dplyr", "scales"), repo
 
 Run `Rscript R/<scriptname>` to run R scripts, found in the `R`subfolder. For example, run `Rscript R/erdos-renyi-ablation-alpha.R` to generate figures and tables related to the effect of the alpha configuration of ParFit for the ER model. The resulting figures and tables can be found in `output_data/figures`.
 
+<<<<<<< HEAD
 ## Running the Maximum-Likelihood Estimation (MLE)
 
 To run the maximum-likelihood estimation (MLE) procedure, follow these steps:
@@ -100,6 +101,7 @@ Running the experiments generates output under the `output_data/` directory, org
   - **`clean_graphs`**  
     Creates cleaned versions of networks in:
     - `input_data/clean/`
+<<<<<<< HEAD
 
 - **MLE experiments (`train_data_<model>`, `test_data_<model>`)**  
   Store generated data in:
