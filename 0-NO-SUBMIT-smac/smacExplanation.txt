@@ -1,0 +1,69 @@
+Here I'll keep an ongoing explanation of status and files.
+
+- smac directory
+	This is where we run smac from
+	- erdosRenyi - specifically for erdos renyi
+	- generalSmac
+		This is suppose to work on all models
+		Its actually the local run
+			Running it with experiments currently doesn't work for me...
+		It has the multiObjective function
+			Which should later become a fitter object.
+
+How to run the smac?
+	Since what I have is the fitter - it should be the X experiment.
+	Meaning - should first run sample_and_measure experiment
+What to do with the results to get figures?
+
+
+TODO: fix multi-obj and run it
+
+
+Running smac instructions:
+First, run sample_and_measure experiment
+For fitter experiment:
+conda activate SMAC\ pf-smac
+cd smac
+python3 ./smacFitter.py --model erdos-renyi
+
+conda activate pf2
+cd ../
+python3 experiments-inbal.py fitted_sample_and_measure_<model>	
+python3 ./experiments-inbal.py merge_csv
+python3 analysis/figures_difference.py --fitter smac --model <model-name>
+
+
+unzipping:
+cd ../output_data/fitted_params/smac/girg-1d
+conda activate base
+unzip girg-1d.zip
+mv output_data/fitted_params/smac/girg-1d/* .
+
+Running attempts with girg:
+1. multivariate (partial) - was really bad
+2. univariate - without transformation (also partial)
+	results: n looks quite good
+		everything else - really doesn't
+3. With transformation like discussed in meeting - still bad
+4. transform2 (folder) - transformation after changing n (according to d), beta (log)
+	Should examine the results
+	My guess - not so good...
+5. transformation - also changing t to be a bit smaller (changing upper bound)
+
+Running attempts:
+1. firstIncumbent - running the erdosRenyiWithSmac,when always taking the first incumbent (25/11/25). Results - d was all over the place.
+
+2. some Improvements:
+generation of config space based on target params
+num of samples: 2 -> 10
+
+3. Eventually results got better when we treated d as float and not int
+with n_trials = 30 - not too bad results
+with larger n_trials - results became quite bad (because when smac found a solution which is really good at one dimension - it might take it)
+
+With n_trials = 60 - I took a random incumbent (until then it was only the first) - slightly better than before. I think this is the one most representing.
+
+
+Next attempt: univariate optimization
+
+Should also run on girg!!!

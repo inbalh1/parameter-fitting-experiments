@@ -1,0 +1,18 @@
+name: pf_smac
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.11
+  # - smac=2.3.1
+  - networkit=10.1
+  - cython
+  - filelock
+  - tqdm
+  - pathos
+  - pip
+  # For smac
+  - gxx_linux-64
+  - gcc_linux-64
+  - swig
+  # Should run conda config --set channel_priority strict before installing smac
