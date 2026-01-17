@@ -29,6 +29,16 @@ R -e 'install.packages(c("ggplot2", "reshape2", "plyr", "dplyr", "scales"), repo
 - Download the file `konect-data.zip` from [Zenodo](https://doi.org/10.5281/zenodo.10629451) and extract its contents into the folder `input_data/konect`
 - Optional: Download the file `output-data.zip` from [Zenodo](https://doi.org/10.5281/zenodo.10629451) and extract its contents into the folder `output_data`. This way, you can access all experiment results without running them yourself.
 
+# Smac installations
+TODO: go through this...
+- To run our experiments with smac, install smac from:
+https://automl.github.io/SMAC3/latest/1_installation/
+Note some packages might clash with the packages of the rest of the project, so its recommended to use another conda environment.
+packages to install (using conda\ pip): TODO: can create its own env file...
+- networkit
+- cmake=3.15
+Install `pygirgs` - the same way as before.
+
 # File structure
 
 - The folder `input_data` contains all networks used (KONECT) and generated (by random network models).
