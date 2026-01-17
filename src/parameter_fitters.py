@@ -3,6 +3,8 @@ import multiprocessing
 import numpy as np
 from models import GraphModel
 from parameters import Parameter
+from statistics import Statistics
+from typing import Optional
 
 
 class ParameterFitter(ABC):
@@ -12,12 +14,16 @@ class ParameterFitter(ABC):
         self.target_parameters = target_parameters
 
     @abstractmethod
-    def run(self):
+    def run(self)->list[Parameter]:
         pass
 
     @staticmethod
     @abstractmethod
     def name():
+        pass
+
+    @abstractmethod
+    def statistics()->Optional[Statistics]:
         pass
 
 
@@ -45,7 +51,7 @@ class RobbinsMonroFinal(ParameterFitter):
         for callback in self.parameter_update_callbacks:
             callback(iteration, parameters, flips)
 
-    def statistics(self):
+    def statistics(self)->Statistics:
         return self.averaging_start, self.total_iterations, self.flips
 
     def run(self):
