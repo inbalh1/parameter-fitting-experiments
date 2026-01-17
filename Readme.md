@@ -101,7 +101,6 @@ Running the experiments generates output under the `output_data/` directory, org
   - **`clean_graphs`**  
     Creates cleaned versions of networks in:
     - `input_data/clean/`
-<<<<<<< HEAD
 
 - **MLE experiments (`train_data_<model>`, `test_data_<model>`)**  
   Store generated data in:

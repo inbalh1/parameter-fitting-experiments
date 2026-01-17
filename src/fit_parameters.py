@@ -7,7 +7,6 @@ import multiprocessing
 from parameter_fitters import ParameterFitter, RobbinsMonroFinal
 from models import GraphModel, ALL_MODELS
 
-<<<<<<< HEAD
 from parameter_fitters import ParameterFitter, RobbinsMonroFinal
 import multiprocessing
 from models import *
