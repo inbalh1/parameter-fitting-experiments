@@ -1,4 +1,3 @@
-# Trying to understand how to use SMAC
 from ConfigSpace import Configuration, ConfigurationSpace, CategoricalHyperparameter, OrdinalHyperparameter, UniformFloatHyperparameter, UniformIntegerHyperparameter
 from smac import BlackBoxFacade, Scenario, Callback
 from smac.main.smbo import SMBO
@@ -16,7 +15,7 @@ import random
 import argparse
 from pathlib import Path
 import time
-# facade - there are several options, and they say its important
+# This code is the fitter for smac
 
 
 n_trials = 60
@@ -24,17 +23,13 @@ num_of_samples = 30
 
 FittedParameters:TypeAlias = list[list[Parameter]]
 
-# TODO: can write the code in a more general way, to combine with the other experiments (the smac should be just the fitter I guess)
 def append_params(accumulated_params: list, cur_params: list):
     if not accumulated_params:
         return cur_params[:]
     for i in range(len(accumulated_params)):
         accumulated_params[i].value += cur_params[i].value
     return accumulated_params
-
-# def compare_param(param: Parameter, target_params: dict):
-#     return (param.value - float(target_params[param.name()])) ** 2
-
+    
 def compare_param(param: Parameter, target_param: Parameter):
     return (param.value - float(target_param.value)) ** 2
 
@@ -71,7 +66,6 @@ def target_function_generator(target_params: list[Parameter], num_of_samples: in
         else:
             # Return a weighted sum of the costs
             final_res = sum(cost * (params_weights[param]) ** 2 for param, cost in params_costs.items())
-            # TODO: from some reason girg doesn't work without this assertion (perhaps it was because I've started running before)
             assert final_res is not None, "Returned None"
             assert np.isfinite(final_res), f"Non-finite value: {value}"
         # print("*** Final res: ")
@@ -146,16 +140,13 @@ def generate_config_space(target_parameters: list[Parameter], model_class: type[
             configspace.add(PARAMS_SPEC['t'].generate_config(value, model_class, features_dict))
         else:
             raise NotImplementedError(out_param_name)  
-
-    # TODO: should add temprature here
-    # TODO: consider create a parameers extended class with this info ( + thresholds )
     
     
     print('config is: ', config)
     return configspace
 
 PARAM_NAME_TO_COST_THRESHOLD = { 'n': 100, 'd': 0.1, 'beta': np.inf, 't': np.inf}
-# TODO: does termination callback ever have effect?
+# This is relevant only for multi-objective
 class TerminationCallback(Callback):
     def build_threshold(self, input_parameters: list[Parameter]):
         self.thresholds = [PARAM_NAME_TO_COST_THRESHOLD[param.name()] for param in input_parameters]
@@ -229,10 +220,9 @@ def extract_res_from_incumbent(incumbent, model_class: type[GraphModel], mode='r
 
     return final_res
     
-# TODO: change function name (it now also handles uni obj)
-def multiObjective(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], output_directory:str, num_of_samples: int=10, is_multi_obj: bool=False)->tuple[FittedParameters, int]:
+def fitParameters(n_trials: int, target_parameters: list[Parameter], model_class: type[GraphModel], output_directory:str, num_of_samples: int=10, is_multi_obj: bool=False)->tuple[FittedParameters, int]:
     """
-    Runs the smac multi-objective optimization
+    Runs the smac optimization
     Notice output_directory should be unique for each input file
     Returns a list of all the resulting incumbents
     """
@@ -260,7 +250,7 @@ def multiObjective(n_trials: int, target_parameters: list[Parameter], model_clas
             n_trials=n_trials,
             output_directory=output_directory
             )
-        # TODO: should set termination criteria of its own
+        # TODO: Later - add termination criteria
         smac = BlackBoxFacade(scenario, target_function=target_function)
     incumbent = smac.optimize()
     print('*** Incumbent***')
@@ -333,6 +323,7 @@ def writeResults(fitted_parameters: list[Parameter], output_file:str, model_clas
 
 
 # Helper functions to coordinate between workers
+# Note - the multi-worker support may create empty files. If you dont finish running everything - these empty files might remain
 def touch(path):
     with open(path, 'a'):
         os.utime(path, None)
@@ -359,6 +350,7 @@ def should_process(output_path):
 
 # TODO: consider writing a general local run (to run experiments, just without the run package,
 # which is parallel and without prints...)
+# Note: make sure to erase the empty output files
 def local_run(model_name: str, is_multi_obj:bool, mode: Literal['all', 'compact']='all'):
     import glob
     from collections import namedtuple
@@ -401,7 +393,7 @@ def local_run(model_name: str, is_multi_obj:bool, mode: Literal['all', 'compact'
             parameter = parameter_class(value)
             parameters.append(parameter)
         output_directory = os.path.join(base_output, "smac_output", i)
-        fitter = multiObjective(
+        fitter = fitParameters(
             n_trials=n_trials,
             target_parameters=parameters,
             model_class=model_class,
