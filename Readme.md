@@ -1,7 +1,5 @@
 These are the experiments for the submission "Robust Parameter Fitting to Realistic Network Models via Iterative Stochastic Approximation".
 
-Additional data can be found at https://doi.org/10.5281/zenodo.10629451.
-
 # Installation
 
 - Make sure you have Python, Pip and R installed.
@@ -27,7 +25,6 @@ R -e 'install.packages(c("ggplot2", "reshape2", "plyr", "dplyr", "scales"), repo
 ```
 
 - Download the relevant networks from [Konect](http://konect.cc/networks/) and add them into the folder `input_data/konect`.
-- Optional: Download the file `output-data.zip` from [Zenodo](https://doi.org/10.5281/zenodo.10629451) and extract its contents into the folder `output_data`. This way, you can access all experiment results without running them yourself.
 
 # File structure
 
