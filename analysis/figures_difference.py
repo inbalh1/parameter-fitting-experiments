@@ -20,6 +20,8 @@ param_name_to_title = {
     'cc': 'clustering coefficient'
 }
 
+BLUE = "#5EA6E5"
+
 # TODO: perhaps should also give output dir
 class Analyzer:
     def __init__(self, fitter, model):
@@ -120,12 +122,25 @@ class Analyzer:
         true_feature = f"{feature}_true"
         fitted_feature = f"{feature}_fitted"
         try:
-            sns.scatterplot(data=tbl, x=true_feature, y=fitted_feature, hue="total_iterations", palette="coolwarm", ax=ax, s=20, linewidth=0)
+            sns.scatterplot(data=tbl, x=true_feature, y=fitted_feature, hue="total_iterations", color=BLUE, ax=ax, s=20, linewidth=0)
             ax.legend(title="Iterations", loc='center left', bbox_to_anchor=(1, 0.5))
         except Exception:
-            sns.scatterplot(data=tbl, x=true_feature, y=fitted_feature, palette="coolwarm", ax=ax, s=20, linewidth=0)
-        # Draw diagonal line
-        ax.plot([tbl[true_feature].min(), tbl[true_feature].max()], [tbl[true_feature].min(), tbl[true_feature].max()], color="black", linewidth=0.5)
+            print("Drawing without hue")
+            sns.scatterplot(data=tbl, x=true_feature, y=fitted_feature, color=BLUE, ax=ax, s=20, linewidth=0)
+        # Draw diagonal line        
+        lims = [
+            min(tbl[true_feature].min(), tbl[fitted_feature].min()),
+            max(tbl[true_feature].max(), tbl[fitted_feature].max()),
+        ]
+        pad = 0.05 * (lims[1] - lims[0])
+        lims = [lims[0] - pad, lims[1] + pad]
+
+        ax.set_xlim(lims)
+        ax.set_ylim(lims)
+        ax.set_aspect("equal", adjustable="box")
+
+        ax.plot(lims, lims, color="black", linewidth=0.5)
+
         ax.set_xlabel(f"Target {feature_title}")
         ax.set_ylabel(f"Mean actual {feature_title}")
         
@@ -144,11 +159,22 @@ class Analyzer:
         true_val = f"{param}"
         measured_val = f"{param}_fitting"
         try:
-            sns.scatterplot(data=tbl, x=true_val, y=measured_val, hue="total_iterations", palette="coolwarm", ax=ax, s=20, linewidth=0)
+            sns.scatterplot(data=tbl, x=true_val, y=measured_val, hue="total_iterations", color=BLUE, ax=ax, s=20, linewidth=0)
             ax.legend(title="Iterations", loc='center left', bbox_to_anchor=(1, 0.5))
         except Exception:
-            sns.scatterplot(data=tbl, x=true_val, y=measured_val, palette="coolwarm", ax=ax, s=20, linewidth=0)
-        ax.plot([tbl[true_val].min(), tbl[true_val].max()], [tbl[true_val].min(), tbl[true_val].max()], color="black", linewidth=0.5)
+            sns.scatterplot(data=tbl, x=true_val, y=measured_val, color=BLUE, ax=ax, s=20, linewidth=0)
+        # Draw diagonal line        
+        lims = [
+            min(tbl[true_val].min(), tbl[measured_val].min()),
+            max(tbl[true_val].max(), tbl[measured_val].max()),
+        ]
+        pad = 0.05 * (lims[1] - lims[0])
+        lims = [lims[0] - pad, lims[1] + pad]
+
+        ax.set_xlim(lims)
+        ax.set_ylim(lims)
+        ax.set_aspect("equal", adjustable="box")
+
         ax.set_xlabel(f"Target {param_title}")
         ax.set_ylabel(f"Mean actual {param_title}")
         
